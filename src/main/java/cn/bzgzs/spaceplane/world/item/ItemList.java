@@ -13,5 +13,6 @@ public class ItemList {
 	// vvvbbbcz:物品注册示例
 	public static final RegistryObject<Item> EXAMPLE = ITEMS.register("example", () -> new Item(new Item.Properties()));
 	// vvvbbbcz:方块的物品形态注册示例
-	public static final RegistryObject<Item> EXAMPLE_BLOCK = ITEMS.register("example_block", () -> new BlockItem(BlockList.EXAMPLE_BLOCK.get(), new Item.Properties()));
+	public static final RegistryObject<BlockItem> EXAMPLE_BLOCK = ITEMS.register("example_block", () -> new BlockItem(BlockList.EXAMPLE_BLOCK.get(), new Item.Properties()));
+	public static final RegistryObject<BlockItem> RHENIUM_ORE = ITEMS.register("rhenium_ore", () -> new BlockItem(BlockList.RHENIUM_ORE.get(), new Item.Properties()));
 }
