@@ -15,4 +15,7 @@ public class ItemList {
 	// vvvbbbcz:方块的物品形态注册示例
 	public static final RegistryObject<BlockItem> EXAMPLE_BLOCK = ITEMS.register("example_block", () -> new BlockItem(BlockList.EXAMPLE_BLOCK.get(), new Item.Properties()));
 	public static final RegistryObject<BlockItem> RHENIUM_ORE = ITEMS.register("rhenium_ore", () -> new BlockItem(BlockList.RHENIUM_ORE.get(), new Item.Properties()));
+	public static final RegistryObject<BlockItem> DEEPSLATE_RHENIUM_ORE = ITEMS.register("deepslate_rhenium_ore", () -> new BlockItem(BlockList.DEEPSLATE_RHENIUM_ORE.get(), new Item.Properties()));
+	public static final RegistryObject<BlockItem> NICKEL_ORE = ITEMS.register("nickel_ore", () -> new BlockItem(BlockList.NICKEL_ORE.get(), new Item.Properties()));
+	public static final RegistryObject<BlockItem> DEEPSLATE_NICKEL_ORE = ITEMS.register("deepslate_nickel_ore", () -> new BlockItem(BlockList.DEEPSLATE_NICKEL_ORE.get(), new Item.Properties()));
 }
