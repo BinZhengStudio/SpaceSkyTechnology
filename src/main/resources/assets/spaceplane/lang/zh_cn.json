@@ -1,0 +1,13 @@
+{
+  "itemGroup.spacePlane": "三体工业：空天科技",
+
+  "block.spaceplane.rhenium_ore": "铼矿石",
+  "block.spaceplane.deepslate_rhenium_ore": "深层铼矿石",
+  "block.spaceplane.rhenium_block": "铼块",
+  "block.spaceplane.nickel_ore": "镍矿石",
+  "block.spaceplane.deepslate_nickel_ore": "深层镍矿石",
+  "block.spaceplane.nickel_block": "镍块",
+
+  "item.spaceplane.rhenium_ingot": "铼锭",
+  "item.spaceplane.nickel_ingot": "镍锭"
+}

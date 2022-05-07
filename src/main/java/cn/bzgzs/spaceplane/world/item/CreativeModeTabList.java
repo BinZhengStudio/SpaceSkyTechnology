@@ -9,7 +9,7 @@ public class CreativeModeTabList {
 		@NotNull
 		@Override
 		public ItemStack makeIcon() {
-			return new ItemStack(ItemList.EXAMPLE.get());
+			return new ItemStack(ItemList.RHENIUM_INGOT.get());
 		}
 	};
 }

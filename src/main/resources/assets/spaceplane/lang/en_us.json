@@ -1,0 +1,13 @@
+{
+  "itemGroup.spacePlane": "Threebody-Space&SkyTechnology",
+
+  "block.spaceplane.rhenium_ore": "Rhenium Ore",
+  "block.spaceplane.deepslate_rhenium_ore": "Deepslate Rhenium Ore",
+  "block.spaceplane.rhenium_block": "Rhenium Block",
+  "block.spaceplane.nickel_ore": "Nickel Ore",
+  "block.spaceplane.deepslate_nickel_ore": "Deepslate Nickel Ore",
+  "block.spaceplane.nickel_block": "Nickel Block",
+
+  "item.spaceplane.rhenium_ingot": "Rhenium Ingot",
+  "item.spaceplane.nickel_ingot": "Nickel Ingot"
+}
