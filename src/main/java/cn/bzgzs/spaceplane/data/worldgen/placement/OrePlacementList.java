@@ -9,8 +9,8 @@ import net.minecraft.world.level.levelgen.placement.*;
 import java.util.List;
 
 public class OrePlacementList {
-	public static final Holder<PlacedFeature> ORE_RHENIUM = PlacementUtils.register("ore_rhenium", OreFeatureList.ORE_RHENIUM, commonOrePlacement(15, HeightRangePlacement.triangle(VerticalAnchor.aboveBottom(-80), VerticalAnchor.aboveBottom(80))));
-	public static final Holder<PlacedFeature> ORE_NICKEL = PlacementUtils.register("ore_nickel", OreFeatureList.ORE_NICKEL, commonOrePlacement(50, HeightRangePlacement.triangle(VerticalAnchor.absolute(-24), VerticalAnchor.absolute(56))));
+	public static final Holder<PlacedFeature> ORE_RHENIUM = PlacementUtils.register("ore_rhenium", OreFeatureList.ORE_RHENIUM, commonOrePlacement(10, HeightRangePlacement.triangle(VerticalAnchor.aboveBottom(-80), VerticalAnchor.aboveBottom(80))));
+	public static final Holder<PlacedFeature> ORE_NICKEL = PlacementUtils.register("ore_nickel", OreFeatureList.ORE_NICKEL, commonOrePlacement(40, HeightRangePlacement.triangle(VerticalAnchor.absolute(-24), VerticalAnchor.absolute(56))));
 
 	private static List<PlacementModifier> orePlacement(PlacementModifier p_195347_, PlacementModifier p_195348_) {
 		return List.of(p_195347_, InSquarePlacement.spread(), p_195348_, BiomeFilter.biome());
