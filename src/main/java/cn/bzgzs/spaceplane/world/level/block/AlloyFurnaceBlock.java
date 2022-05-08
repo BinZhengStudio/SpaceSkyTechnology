@@ -1,6 +1,6 @@
 package cn.bzgzs.spaceplane.world.level.block;
 
-import cn.bzgzs.spaceplane.world.level.block.entity.FluidPipeEntityBlock;
+import cn.bzgzs.spaceplane.world.level.block.entity.AlloyFurnaceBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -19,7 +19,7 @@ public class AlloyFurnaceBlock extends BaseEntityBlock {
 	@Nullable
 	@Override
 	public BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
-		return new FluidPipeEntityBlock(pos, state);
+		return new AlloyFurnaceBlockEntity(pos, state);
 	}
 
 	@Override
