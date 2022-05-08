@@ -21,4 +21,6 @@ public class BlockList {
 	public static final RegistryObject<Block> NICKEL_BLOCK = BLOCKS.register("nickel_block", () -> new Block(Block.Properties.of(Material.METAL).requiresCorrectToolForDrops().strength(5.0F, 6.0F).sound(SoundType.METAL)));
 	public static final RegistryObject<Block> ALLOY_FURNACE = BLOCKS.register("alloy_furnace", AlloyFurnaceBlock::new);
 	public static final RegistryObject<Block> FLUID_PIPE = BLOCKS.register("fluid_pipe", IronFluidPipeBlock::new);
+	public static final RegistryObject<Block> ENGINE = BLOCKS.register("engine", EngineBlock::new);
+	public static final RegistryObject<Block> TRANSMISSION_ROD = BLOCKS.register("transmission_rod", TransmissionRodBlock::new);
 }

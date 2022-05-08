@@ -11,5 +11,7 @@ public class BlockEntityTypeList {
 	public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPE = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITIES, SpacePlane.MODID);
 
 	public static final RegistryObject<BlockEntityType<AlloyFurnaceBlockEntity>> ALLOY_FURNACE = BLOCK_ENTITY_TYPE.register("alloy_furnace", () -> BlockEntityType.Builder.of(AlloyFurnaceBlockEntity::new, BlockList.ALLOY_FURNACE.get()).build(null));
+	public static final RegistryObject<BlockEntityType<EngineBlockEntity>> ENGINE = BLOCK_ENTITY_TYPE.register("engine", () -> BlockEntityType.Builder.of(EngineBlockEntity::new, BlockList.ENGINE.get()).build(null));
+	public static final RegistryObject<BlockEntityType<TransmissionRodBlockEntity>> TRANSMISSION_ROD = BLOCK_ENTITY_TYPE.register("transmission_rod", () -> BlockEntityType.Builder.of(TransmissionRodBlockEntity::new, BlockList.TRANSMISSION_ROD.get()).build(null));
 	public static final RegistryObject<BlockEntityType<IronFluidPipeBlockEntity>> IRON_FLUID_PIPE = BLOCK_ENTITY_TYPE.register("iron_fluid_pipe", () -> BlockEntityType.Builder.of(IronFluidPipeBlockEntity::new, BlockList.FLUID_PIPE.get()).build(null));
 }
