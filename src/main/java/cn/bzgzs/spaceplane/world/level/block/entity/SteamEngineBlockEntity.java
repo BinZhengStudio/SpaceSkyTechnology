@@ -12,6 +12,7 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
@@ -25,8 +26,36 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
-	private int speed, torque;
+	private int speed, torque, burnTime, waterAmount;
+	public static final int MAX_SPEED = 15, MAX_TORQUE = 10, MAX_WATER = 4000;
 	private final NonNullList<ItemStack> inventory = NonNullList.withSize(2, ItemStack.EMPTY);
+	private final ContainerData data = new ContainerData() {
+		@Override
+		public int get(int index) {
+			return switch (index) {
+				case 0 -> speed;
+				case 1 -> torque;
+				case 2 -> burnTime;
+				case 3 -> waterAmount;
+				default -> 0;
+			};
+		}
+
+		@Override
+		public void set(int index, int value) {
+			switch (index) {
+				case 0 -> speed = value;
+				case 1 -> torque = value;
+				case 2 -> burnTime = value;
+				case 3 -> waterAmount = value;
+			}
+		}
+
+		@Override
+		public int getCount() {
+			return 4;
+		}
+	};
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
 		@Override
 		public int getAngularVelocity() {
@@ -63,7 +92,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		super(BlockEntityTypeList.STEAM_ENGINE.get(), pos, state);
 	}
 
-	public static void serverTick(Level world, BlockPos pos, BlockState state, SteamEngineBlockEntity entity) {
+	public static void serverTick(Level world, BlockPos pos, BlockState state, SteamEngineBlockEntity blockEntity) {
 		// TODO
 	}
 
@@ -74,7 +103,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 
 	@Override
 	protected AbstractContainerMenu createMenu(int id, Inventory inventory) {
-		return new SteamEngineMenu(id, inventory, this);
+		return new SteamEngineMenu(id, inventory, this, this.data);
 	}
 
 	@Override

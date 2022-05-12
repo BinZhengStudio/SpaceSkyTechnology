@@ -11,5 +11,7 @@
   "item.spaceplane.rhenium_ingot": "Rhenium Ingot",
   "item.spaceplane.nickel_ingot": "Nickel Ingot",
 
-  "container.steam_engine": "Steam Engine"
+  "container.steam_engine": "Steam Engine",
+
+  "button.steam_engine.water_io": "Pour In/Out"
 }

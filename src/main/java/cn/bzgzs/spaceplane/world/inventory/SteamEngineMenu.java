@@ -5,20 +5,24 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public class SteamEngineMenu extends AbstractContainerMenu {
 	private final Container container;
+	private final ContainerData data;
 
 	public SteamEngineMenu(int id, Inventory inventory) {
-		this(id, inventory, new SimpleContainer(2));
+		this(id, inventory, new SimpleContainer(2), new SimpleContainerData(4));
 	}
 
-	public SteamEngineMenu(int id, Inventory inventory, Container container /* TODO 可能需要ContainerData */) {
+	public SteamEngineMenu(int id, Inventory inventory, Container container, ContainerData data) {
 		super(MenuTypeList.STEAM_ENGINE.get(), id);
 		this.container = container;
+		this.data = data;
 
 		this.addSlot(new Slot(container, 0, 70, 42)); // 燃料槽
 		this.addSlot(new Slot(container, 1, 111, 34)); // 水槽
@@ -32,6 +36,10 @@ public class SteamEngineMenu extends AbstractContainerMenu {
 		for (int i = 0; i < 9; ++i) {
 			this.addSlot(new Slot(inventory, i, 8 + i * 18, 142));
 		}
+	}
+
+	public ContainerData getData() {
+		return this.data;
 	}
 
 	@Override
