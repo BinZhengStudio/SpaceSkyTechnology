@@ -4,6 +4,10 @@ import cn.bzgzs.spaceplane.world.level.block.entity.BlockEntityTypeList;
 import cn.bzgzs.spaceplane.world.level.block.entity.SteamEngineBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -19,8 +23,11 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.material.Material;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nonnull;
 
 public class SteamEngineBlock extends BaseEntityBlock {
 	public static final BooleanProperty LIT = BlockStateProperties.LIT;
@@ -31,9 +38,20 @@ public class SteamEngineBlock extends BaseEntityBlock {
 		this.registerDefaultState(this.stateDefinition.any().setValue(LIT, false).setValue(FACING, Direction.NORTH));
 	}
 
+	@Override
+	public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult result) {
+		if (!world.isClientSide) {
+			BlockEntity blockEntity = world.getBlockEntity(pos);
+			if (blockEntity instanceof SteamEngineBlockEntity) {
+				NetworkHooks.openGui((ServerPlayer) player, (SteamEngineBlockEntity) blockEntity, blockEntity.getBlockPos());
+			}
+		}
+		return InteractionResult.sidedSuccess(world.isClientSide);
+	}
+
 	@Nullable
 	@Override
-	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level world, @NotNull BlockState state, @NotNull BlockEntityType<T> type) {
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level world, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
 		return world.isClientSide ? null : createTickerHelper(type, BlockEntityTypeList.STEAM_ENGINE.get(), SteamEngineBlockEntity::serverTick);
 	}
 
@@ -49,13 +67,13 @@ public class SteamEngineBlock extends BaseEntityBlock {
 	}
 
 	@Override
-	public @NotNull RenderShape getRenderShape(@NotNull BlockState state) {
+	public @Nonnull RenderShape getRenderShape(@Nonnull BlockState state) {
 		return RenderShape.MODEL;
 	}
 
 	@Nullable
 	@Override
-	public BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+	public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
 		return new SteamEngineBlockEntity(pos, state);
 	}
 }

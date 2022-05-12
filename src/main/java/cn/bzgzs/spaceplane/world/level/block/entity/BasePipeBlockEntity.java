@@ -9,7 +9,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
-import org.jetbrains.annotations.NotNull;
+
+import javax.annotation.Nonnull;
 
 public abstract class BasePipeBlockEntity extends BlockEntity {
 	public int flow;
@@ -19,7 +20,7 @@ public abstract class BasePipeBlockEntity extends BlockEntity {
 			return 1;
 		}
 
-		@NotNull
+		@Nonnull
 		@Override
 		public FluidStack getFluidInTank(int tank) {
 			return null;
@@ -31,7 +32,7 @@ public abstract class BasePipeBlockEntity extends BlockEntity {
 		}
 
 		@Override
-		public boolean isFluidValid(int tank, @NotNull FluidStack stack) {
+		public boolean isFluidValid(int tank, @Nonnull FluidStack stack) {
 			return true;
 		}
 
@@ -40,13 +41,13 @@ public abstract class BasePipeBlockEntity extends BlockEntity {
 			return 0;
 		}
 
-		@NotNull
+		@Nonnull
 		@Override
 		public FluidStack drain(FluidStack resource, FluidAction action) {
 			return null;
 		}
 
-		@NotNull
+		@Nonnull
 		@Override
 		public FluidStack drain(int maxDrain, FluidAction action) {
 			return null;

@@ -8,8 +8,9 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Material;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nonnull;
 
 public class AlloyFurnaceBlock extends BaseEntityBlock {
 	public AlloyFurnaceBlock() {
@@ -18,12 +19,12 @@ public class AlloyFurnaceBlock extends BaseEntityBlock {
 
 	@Nullable
 	@Override
-	public BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+	public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
 		return new AlloyFurnaceBlockEntity(pos, state);
 	}
 
 	@Override
-	public @NotNull RenderShape getRenderShape(@NotNull BlockState state) {
+	public @Nonnull RenderShape getRenderShape(@Nonnull BlockState state) {
 		return RenderShape.MODEL;
 	}
 }

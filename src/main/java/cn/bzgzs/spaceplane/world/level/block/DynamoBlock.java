@@ -5,8 +5,9 @@ import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class DynamoBlock extends BaseEntityBlock { // TODO
 	protected DynamoBlock(Properties p_49224_) {
@@ -15,12 +16,12 @@ public class DynamoBlock extends BaseEntityBlock { // TODO
 
 	@Nullable
 	@Override
-	public BlockEntity newBlockEntity(@NotNull BlockPos p_153215_, @NotNull BlockState p_153216_) {
+	public BlockEntity newBlockEntity(@Nonnull BlockPos p_153215_, @Nonnull BlockState p_153216_) {
 		return null;
 	}
 
 	@Override
-	public @NotNull RenderShape getRenderShape(@NotNull BlockState p_49232_) {
+	public @Nonnull RenderShape getRenderShape(@Nonnull BlockState p_49232_) {
 		return RenderShape.MODEL;
 	}
 }

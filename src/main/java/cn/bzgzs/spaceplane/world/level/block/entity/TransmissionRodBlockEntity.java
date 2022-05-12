@@ -8,8 +8,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.LazyOptional;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nonnull;
 
 public class TransmissionRodBlockEntity extends BlockEntity {
 	private int speed,torque;
@@ -50,9 +51,9 @@ public class TransmissionRodBlockEntity extends BlockEntity {
 		super(BlockEntityTypeList.TRANSMISSION_ROD.get(), pos, state);
 	}
 
-	@NotNull
+	@Nonnull
 	@Override
-	public <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
+	public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
 		boolean correctDirection = side.getAxis() == this.getBlockState().getValue(TransmissionRodBlock.AXIS);
 		boolean correctCapability = cap == CapabilityList.MECHANICAL_TRANSMISSION;
 		return correctCapability && correctDirection ? this.transmission.cast() : super.getCapability(cap, side);
