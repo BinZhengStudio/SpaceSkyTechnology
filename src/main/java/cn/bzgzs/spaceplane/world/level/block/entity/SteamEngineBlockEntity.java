@@ -1,6 +1,7 @@
 package cn.bzgzs.spaceplane.world.level.block.entity;
 
 import cn.bzgzs.spaceplane.energy.IMechanicalTransmission;
+import cn.bzgzs.spaceplane.world.inventory.SteamEngineMenu;
 import cn.bzgzs.spaceplane.world.level.block.SteamEngineBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -72,8 +73,8 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 	}
 
 	@Override
-	protected AbstractContainerMenu createMenu(int p_58627_, Inventory inventory) {
-		return null; // TODO
+	protected AbstractContainerMenu createMenu(int id, Inventory inventory) {
+		return new SteamEngineMenu(id, inventory, this);
 	}
 
 	@Override
