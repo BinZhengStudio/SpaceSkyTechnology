@@ -1,9 +1,10 @@
 package cn.bzgzs.spaceplane.world.level.block.entity;
 
 import cn.bzgzs.spaceplane.energy.IMechanicalTransmission;
-import cn.bzgzs.spaceplane.world.level.block.TransmissionRodBlock;
+import cn.bzgzs.spaceplane.world.level.block.SteamEngineBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
@@ -11,18 +12,19 @@ import net.minecraftforge.common.util.LazyOptional;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TransmissionRodBlockEntity extends BlockEntity {
-	private int speed,torque;
-	private BlockEntity engine;
+import java.util.Objects;
+
+public class SteamEngineBlockEntity extends BlockEntity {
+	private int speed, torque;
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
 		@Override
 		public int getAngularVelocity() {
-			return TransmissionRodBlockEntity.this.speed;
+			return SteamEngineBlockEntity.this.speed;
 		}
 
 		@Override
 		public float getTorque() {
-			return TransmissionRodBlockEntity.this.torque;
+			return SteamEngineBlockEntity.this.torque;
 		}
 
 		@Override
@@ -32,29 +34,36 @@ public class TransmissionRodBlockEntity extends BlockEntity {
 
 		@Override
 		public boolean isSource() {
-			return false;
-		}
-
-		@Override
-		public boolean isRod() {
 			return true;
 		}
 
 		@Override
+		public boolean isRod() {
+			return false;
+		}
+
+		@Override
 		public BlockEntity getSource() {
-			return TransmissionRodBlockEntity.this.engine;
+			return SteamEngineBlockEntity.this;
 		}
 	});
 
-	public TransmissionRodBlockEntity(BlockPos pos, BlockState state) {
-		super(BlockEntityTypeList.TRANSMISSION_ROD.get(), pos, state);
+
+	public SteamEngineBlockEntity(BlockPos pos, BlockState state) {
+		super(BlockEntityTypeList.STEAM_ENGINE.get(), pos, state);
 	}
+
+	public static void serverTick(Level world, BlockPos pos, BlockState state, SteamEngineBlockEntity entity) {
+
+	}
+
+	// TODO：物品、流体存储
 
 	@NotNull
 	@Override
 	public <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
-		boolean correctDirection = side.getAxis() == this.getBlockState().getValue(TransmissionRodBlock.AXIS);
-		boolean correctCapability = cap == CapabilityList.MECHANICAL_TRANSMISSION;
+		boolean correctDirection = side == this.getBlockState().getValue(SteamEngineBlock.FACING);
+		boolean correctCapability = Objects.equals(cap, CapabilityList.MECHANICAL_TRANSMISSION);
 		return correctCapability && correctDirection ? this.transmission.cast() : super.getCapability(cap, side);
 	}
 }

@@ -1,5 +1,6 @@
 package cn.bzgzs.spaceplane.world.level.block.entity;
 
+import cn.bzgzs.spaceplane.energy.IMechanicalTransmission;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.common.capabilities.CapabilityToken;
