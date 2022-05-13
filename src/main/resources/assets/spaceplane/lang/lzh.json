@@ -7,11 +7,12 @@
   "block.spaceplane.nickel_ore": "鎳礦",
   "block.spaceplane.deepslate_nickel_ore": "深鎳礦",
   "block.spaceplane.nickel_block": "鎳塊",
+  "block.spaceplane.steam_engine": "汽機",
 
   "item.spaceplane.rhenium_ingot": "錸錠",
   "item.spaceplane.nickel_ingot": "鎳錠",
 
-  "container.spaceplane.steam_engine": "蒸汽機",
+  "container.spaceplane.steam_engine": "汽機",
 
   "button.steam_engine.water_io": "入水/出水"
 }

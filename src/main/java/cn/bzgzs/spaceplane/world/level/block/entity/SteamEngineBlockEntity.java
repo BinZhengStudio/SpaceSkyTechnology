@@ -21,6 +21,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.LazyOptional;
 
@@ -29,7 +30,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
-	private int speed, torque, burnTime, waterAmount;
+	private int speed, torque, burnTime, totalBurnTime, waterAmount;
 	public static final int MAX_SPEED = 15, MAX_TORQUE = 10, MAX_WATER = 4000;
 	private final NonNullList<ItemStack> inventory = NonNullList.withSize(2, ItemStack.EMPTY);
 	private final ContainerData data = new ContainerData() {
@@ -39,10 +40,11 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 				case 0 -> speed;
 				case 1 -> torque;
 				case 2 -> burnTime;
-				case 3 -> waterAmount;
-				case 4 -> SteamEngineBlockEntity.this.getBlockPos().getX();
-				case 5 -> SteamEngineBlockEntity.this.getBlockPos().getY();
-				case 6 -> SteamEngineBlockEntity.this.getBlockPos().getZ();
+				case 3 -> totalBurnTime;
+				case 4 -> waterAmount;
+				case 5 -> SteamEngineBlockEntity.this.getBlockPos().getX();
+				case 6 -> SteamEngineBlockEntity.this.getBlockPos().getY();
+				case 7 -> SteamEngineBlockEntity.this.getBlockPos().getZ();
 				default -> 0;
 			};
 		}
@@ -63,15 +65,18 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 					waterAmount = value;
 					break;
 				case 4:
+					totalBurnTime = value;
+					break;
 				case 5:
 				case 6:
+				case 7:
 					break;
 			}
 		}
 
 		@Override
 		public int getCount() {
-			return 7;
+			return 8;
 		}
 	};
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
@@ -111,7 +116,16 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 	}
 
 	public static void serverTick(Level world, BlockPos pos, BlockState state, SteamEngineBlockEntity blockEntity) {
-		// TODO
+		if (blockEntity.burnTime > 0)
+			--blockEntity.burnTime;
+		if (blockEntity.burnTime <= 0) {
+			ItemStack stack = blockEntity.inventory.get(0);
+			int time = ForgeHooks.getBurnTime(stack, null);
+			if (time > 0) {
+				stack.shrink(1);
+				blockEntity.burnTime = blockEntity.totalBurnTime = time;
+			}
+		}
 	}
 
 	public void waterUseBucketIO(boolean isPourIn, int amount) {
@@ -135,6 +149,8 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		super.load(tag);
 		ContainerHelper.loadAllItems(tag, this.inventory);
 		this.waterAmount = tag.getInt("WaterAmount");
+		this.burnTime = tag.getInt("BurnTime");
+		this.totalBurnTime = tag.getInt("TotalBurnTime");
 		// TODO 读取其他数据
 	}
 
@@ -143,6 +159,8 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		super.saveAdditional(tag);
 		ContainerHelper.saveAllItems(tag, this.inventory);
 		tag.putInt("WaterAmount", this.waterAmount);
+		tag.putInt("BurnTime", this.burnTime);
+		tag.putInt("TotalBurnTime", this.totalBurnTime);
 		// TODO 存储其他数据
 	}
 
