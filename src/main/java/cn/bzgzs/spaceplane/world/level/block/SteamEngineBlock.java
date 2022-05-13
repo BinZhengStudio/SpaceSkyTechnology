@@ -4,7 +4,9 @@ import cn.bzgzs.spaceplane.world.level.block.entity.BlockEntityTypeList;
 import cn.bzgzs.spaceplane.world.level.block.entity.SteamEngineBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -48,6 +50,17 @@ public class SteamEngineBlock extends BaseEntityBlock {
 			}
 		}
 		return InteractionResult.sidedSuccess(world.isClientSide);
+	}
+
+	@Override
+	public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean p_48717_) {
+		if (!state.is(newState.getBlock())) {
+			BlockEntity blockentity = world.getBlockEntity(pos);
+			if (blockentity instanceof SteamEngineBlockEntity) {
+				if (world instanceof ServerLevel) Containers.dropContents(world, pos, (SteamEngineBlockEntity) blockentity);
+			}
+			super.onRemove(state, world, pos, newState, p_48717_);
+		}
 	}
 
 	@Nullable

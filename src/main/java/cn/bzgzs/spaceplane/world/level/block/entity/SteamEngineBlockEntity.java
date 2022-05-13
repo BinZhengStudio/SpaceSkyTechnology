@@ -1,11 +1,13 @@
 package cn.bzgzs.spaceplane.world.level.block.entity;
 
+import cn.bzgzs.spaceplane.SpacePlane;
 import cn.bzgzs.spaceplane.energy.IMechanicalTransmission;
 import cn.bzgzs.spaceplane.world.inventory.SteamEngineMenu;
 import cn.bzgzs.spaceplane.world.level.block.SteamEngineBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.ContainerHelper;
@@ -14,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -37,6 +40,9 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 				case 1 -> torque;
 				case 2 -> burnTime;
 				case 3 -> waterAmount;
+				case 4 -> SteamEngineBlockEntity.this.getBlockPos().getX();
+				case 5 -> SteamEngineBlockEntity.this.getBlockPos().getY();
+				case 6 -> SteamEngineBlockEntity.this.getBlockPos().getZ();
 				default -> 0;
 			};
 		}
@@ -44,16 +50,28 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		@Override
 		public void set(int index, int value) {
 			switch (index) {
-				case 0 -> speed = value;
-				case 1 -> torque = value;
-				case 2 -> burnTime = value;
-				case 3 -> waterAmount = value;
+				case 0:
+					speed = value;
+					break;
+				case 1:
+					torque = value;
+					break;
+				case 2:
+					burnTime = value;
+					break;
+				case 3:
+					waterAmount = value;
+					break;
+				case 4:
+				case 5:
+				case 6:
+					break;
 			}
 		}
 
 		@Override
 		public int getCount() {
-			return 4;
+			return 7;
 		}
 	};
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
@@ -96,9 +114,41 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		// TODO
 	}
 
+	public void waterUseBucketIO(boolean isPourIn, int amount) {
+		if (isPourIn) {
+			if (this.waterAmount + amount <= MAX_WATER) {
+				this.waterAmount += amount;
+				this.inventory.set(1, new ItemStack(Items.BUCKET));
+				this.setChanged();
+			} else SpacePlane.LOGGER.error("Water overflow! Did you check the water amount?");
+		} else {
+			if (this.waterAmount - amount >= 0) {
+				this.waterAmount -= amount;
+				this.inventory.set(1, new ItemStack(Items.WATER_BUCKET));
+				this.setChanged();
+			} else SpacePlane.LOGGER.error("Too much water took back! Did you check the water amount?");
+		}
+	}
+
+	@Override
+	public void load(CompoundTag tag) {
+		super.load(tag);
+		ContainerHelper.loadAllItems(tag, this.inventory);
+		this.waterAmount = tag.getInt("WaterAmount");
+		// TODO 读取其他数据
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag) {
+		super.saveAdditional(tag);
+		ContainerHelper.saveAllItems(tag, this.inventory);
+		tag.putInt("WaterAmount", this.waterAmount);
+		// TODO 存储其他数据
+	}
+
 	@Override
 	protected Component getDefaultName() {
-		return new TranslatableComponent("container.steam_engine");
+		return new TranslatableComponent("container." + SpacePlane.MODID + ".steam_engine");
 	}
 
 	@Override

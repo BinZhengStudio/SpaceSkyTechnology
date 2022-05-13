@@ -1,6 +1,7 @@
 package cn.bzgzs.spaceplane;
 
 import cn.bzgzs.spaceplane.client.gui.screens.MenuScreenManager;
+import cn.bzgzs.spaceplane.network.NetworkHandler;
 import cn.bzgzs.spaceplane.world.inventory.MenuTypeList;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.level.block.BlockList;
@@ -10,10 +11,13 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Mod(SpacePlane.MODID)
 public class SpacePlane {
-	public static final String MODID = "spaceplane"; // mod ID
+	public static final String MODID = "spaceplane";
+	public static final Logger LOGGER = LogManager.getLogger();
 
 	public SpacePlane() {
 		BlockList.BLOCKS.register(FMLJavaModLoadingContext.get().getModEventBus()); // 注册方块
@@ -26,7 +30,8 @@ public class SpacePlane {
 		MinecraftForge.EVENT_BUS.register(this);
 	}
 
-	private void setup(final FMLCommonSetupEvent event) { // 暂时不用
+	private void setup(final FMLCommonSetupEvent event) {
+		event.enqueueWork(NetworkHandler::register); // 注册网络发包
 	}
 
 	private void doClientStuff(final FMLClientSetupEvent event) { // 与客户端相关的代码
