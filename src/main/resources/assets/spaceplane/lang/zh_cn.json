@@ -11,7 +11,7 @@
   "item.spaceplane.rhenium_ingot": "铼锭",
   "item.spaceplane.nickel_ingot": "镍锭",
 
-  "container.steam_engine": "蒸汽引擎",
+  "container.spaceplane.steam_engine": "蒸汽引擎",
 
   "button.steam_engine.water_io": "倒入/倒出"
 }
