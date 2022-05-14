@@ -6,10 +6,10 @@ import javax.annotation.Nullable;
 
 public interface IMechanicalTransmission {
 	/**
-	 * 获取转动角速度，单位为rad/s（1s=20tick）
-	 * @return 该部件转动的角速度
+	 * 获取转速，单位为rps（1s=20tick）
+	 * @return 每秒转动圈数
 	 */
-	int getAngularVelocity();
+	int getSpeed();
 
 	/**
 	 * 获取扭力，无单位，仅限输出源需要设置
@@ -18,7 +18,7 @@ public interface IMechanicalTransmission {
 	float getTorque();
 
 	/**
-	 * 获取阻力数值，无单位，仅限输入源设置
+	 * 获取阻力数值，无单位。输出源也要设置，以处理多个输出源并联且速度不同的情况
 	 * @return 阻力
 	 */
 	float getResistance();

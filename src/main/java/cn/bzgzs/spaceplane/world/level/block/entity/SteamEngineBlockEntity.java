@@ -30,10 +30,11 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
-	private int speed, torque, burnTime, totalBurnTime, waterAmount;
-	public static final int MAX_SPEED = 15, MAX_TORQUE = 10, MAX_WATER = 4000;
+	// 转速、扭力、燃烧时间、总时间、水量、tick数（使每12tick才减waterAmount一次）
+	private int speed, torque, burnTime, totalBurnTime, waterAmount, shrinkTick;
+	public static final int MAX_SPEED = 15, MAX_POWER = 150, MAX_WATER = 4000; // 最大转速，最大功率，最大水量
 	private final NonNullList<ItemStack> inventory = NonNullList.withSize(2, ItemStack.EMPTY);
-	private final ContainerData data = new ContainerData() {
+	private final ContainerData data = new ContainerData() { // 这个用于向客户端发送服务端的相关据数据
 		@Override
 		public int get(int index) {
 			return switch (index) {
@@ -50,7 +51,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		}
 
 		@Override
-		public void set(int index, int value) {
+		public void set(int index, int value) { // 这个是让在服务端的Menu中也能更改BlockEntity的数据
 			switch (index) {
 				case 0:
 					speed = value;
@@ -62,12 +63,12 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 					burnTime = value;
 					break;
 				case 3:
-					waterAmount = value;
-					break;
-				case 4:
 					totalBurnTime = value;
 					break;
-				case 5:
+				case 4:
+					waterAmount = value;
+					break;
+				case 5: // BlockPos不能更改
 				case 6:
 				case 7:
 					break;
@@ -81,7 +82,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 	};
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
 		@Override
-		public int getAngularVelocity() {
+		public int getSpeed() {
 			return SteamEngineBlockEntity.this.speed;
 		}
 
@@ -92,7 +93,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 
 		@Override
 		public float getResistance() {
-			return 0;
+			return 1.0F;
 		}
 
 		@Override
@@ -116,16 +117,38 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 	}
 
 	public static void serverTick(Level world, BlockPos pos, BlockState state, SteamEngineBlockEntity blockEntity) {
-		if (blockEntity.burnTime > 0)
+		if (blockEntity.isLit()) {
 			--blockEntity.burnTime;
-		if (blockEntity.burnTime <= 0) {
+			blockEntity.setChanged(); // 必须标记，否则Minecraft不会保存数据
+		}
+		if (blockEntity.hasWater() && blockEntity.isLit() && blockEntity.shrinkTick <= 0) {
+			--blockEntity.waterAmount;
+			blockEntity.shrinkTick = 12;
+			blockEntity.setChanged();
+		} else {
+			--blockEntity.shrinkTick;
+		}
+		if (!blockEntity.isLit() && blockEntity.hasWater()) { // 如果没有燃烧，并且有水，则消耗燃料并燃烧
 			ItemStack stack = blockEntity.inventory.get(0);
 			int time = ForgeHooks.getBurnTime(stack, null);
 			if (time > 0) {
 				stack.shrink(1);
 				blockEntity.burnTime = blockEntity.totalBurnTime = time;
+				blockEntity.setChanged();
 			}
 		}
+		if (blockEntity.isLit() != state.getValue(SteamEngineBlock.LIT)) { // 如果燃烧状态与state不符，则更新state，这个判断可以防止重复更新
+			world.setBlock(pos, state.setValue(SteamEngineBlock.LIT, blockEntity.isLit()), 3);
+			blockEntity.setChanged();
+		}
+	}
+
+	public boolean isLit() { // 是否正在燃烧
+		return this.burnTime > 0;
+	}
+
+	public boolean hasWater() { // 是否有水
+		return this.waterAmount > 0;
 	}
 
 	public void waterUseBucketIO(boolean isPourIn, int amount) {
@@ -148,9 +171,10 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 	public void load(CompoundTag tag) {
 		super.load(tag);
 		ContainerHelper.loadAllItems(tag, this.inventory);
-		this.waterAmount = tag.getInt("WaterAmount");
 		this.burnTime = tag.getInt("BurnTime");
 		this.totalBurnTime = tag.getInt("TotalBurnTime");
+		this.waterAmount = tag.getInt("WaterAmount");
+		this.shrinkTick = tag.getInt("ShrinkTick");
 		// TODO 读取其他数据
 	}
 
@@ -158,9 +182,10 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 	protected void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
 		ContainerHelper.saveAllItems(tag, this.inventory);
-		tag.putInt("WaterAmount", this.waterAmount);
 		tag.putInt("BurnTime", this.burnTime);
 		tag.putInt("TotalBurnTime", this.totalBurnTime);
+		tag.putInt("WaterAmount", this.waterAmount);
+		tag.putInt("ShrinkTick", this.shrinkTick);
 		// TODO 存储其他数据
 	}
 

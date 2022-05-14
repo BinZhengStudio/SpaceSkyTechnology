@@ -14,5 +14,9 @@
 
   "container.spaceplane.steam_engine": "Steam Engine",
 
-  "button.steam_engine.water_io": "Pour In/Out"
+  "button.steam_engine.water_io": "Pour In/Out",
+
+  "label.steam_engine.speed": "Speed(rps):",
+  "label.steam_engine.torque": "Torque:",
+  "label.steam_engine.water_amount": "Water(mB):"
 }

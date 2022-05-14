@@ -14,5 +14,9 @@
 
   "container.spaceplane.steam_engine": "蒸汽引擎",
 
-  "button.steam_engine.water_io": "倒入/倒出"
+  "button.steam_engine.water_io": "倒入/倒出",
+
+  "label.steam_engine.speed": "转速(rps):",
+  "label.steam_engine.torque": "扭力:",
+  "label.steam_engine.water_amount": "水量(mB):"
 }

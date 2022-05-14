@@ -17,7 +17,7 @@ public class TransmissionRodBlockEntity extends BlockEntity {
 	private BlockEntity engine;
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
 		@Override
-		public int getAngularVelocity() {
+		public int getSpeed() {
 			return TransmissionRodBlockEntity.this.speed;
 		}
 

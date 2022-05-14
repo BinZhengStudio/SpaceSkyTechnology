@@ -14,5 +14,9 @@
 
   "container.spaceplane.steam_engine": "汽機",
 
-  "button.steam_engine.water_io": "入水/出水"
+  "button.steam_engine.water_io": "入水/出水",
+
+  "label.steam_engine.speed": "速(rps):",
+  "label.steam_engine.torque": "力:",
+  "label.steam_engine.water_amount": "水(mB):"
 }
