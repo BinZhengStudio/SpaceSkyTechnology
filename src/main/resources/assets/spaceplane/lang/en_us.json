@@ -18,5 +18,7 @@
 
   "label.steam_engine.speed": "Speed(rps):",
   "label.steam_engine.torque": "Torque:",
-  "label.steam_engine.water_amount": "Water(mB):"
+  "label.steam_engine.water_amount": "Water(mB):",
+
+  "slider.steam_engine.speed": "Speed Controller"
 }

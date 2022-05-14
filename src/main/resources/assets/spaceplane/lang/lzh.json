@@ -18,5 +18,7 @@
 
   "label.steam_engine.speed": "速(rps):",
   "label.steam_engine.torque": "力:",
-  "label.steam_engine.water_amount": "水(mB):"
+  "label.steam_engine.water_amount": "水(mB):",
+
+  "slider.steam_engine.speed": "調速"
 }

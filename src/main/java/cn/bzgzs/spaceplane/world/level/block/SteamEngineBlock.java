@@ -46,7 +46,6 @@ public class SteamEngineBlock extends BaseEntityBlock {
 			BlockEntity blockEntity = world.getBlockEntity(pos);
 			if (blockEntity instanceof SteamEngineBlockEntity) {
 				NetworkHooks.openGui((ServerPlayer) player, (SteamEngineBlockEntity) blockEntity, (buf) -> buf.writeBlockPos(blockEntity.getBlockPos()));
-//				player.openMenu((SteamEngineBlockEntity) blockEntity);
 			}
 		}
 		return InteractionResult.sidedSuccess(world.isClientSide);

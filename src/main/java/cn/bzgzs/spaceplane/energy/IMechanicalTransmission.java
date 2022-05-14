@@ -9,7 +9,7 @@ public interface IMechanicalTransmission {
 	 * 获取转速，单位为rps（1s=20tick）
 	 * @return 每秒转动圈数
 	 */
-	int getSpeed();
+	int getSpeed(); // TODO 可能要改成float
 
 	/**
 	 * 获取扭力，无单位，仅限输出源需要设置

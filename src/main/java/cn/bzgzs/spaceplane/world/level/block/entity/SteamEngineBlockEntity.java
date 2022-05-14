@@ -80,6 +80,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 			return 8;
 		}
 	};
+
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
 		@Override
 		public int getSpeed() {
@@ -88,7 +89,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 
 		@Override
 		public float getTorque() {
-			return SteamEngineBlockEntity.this.torque;
+			return (float) MAX_POWER / SteamEngineBlockEntity.this.speed; // TODO 可能产生问题
 		}
 
 		@Override
@@ -123,7 +124,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		}
 		if (blockEntity.hasWater() && blockEntity.isLit() && blockEntity.shrinkTick <= 0) {
 			--blockEntity.waterAmount;
-			blockEntity.shrinkTick = 12;
+			blockEntity.shrinkTick = 12; // 每12tick减一次waterAmount，这样水不会少的太快
 			blockEntity.setChanged();
 		} else {
 			--blockEntity.shrinkTick;
@@ -164,6 +165,15 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 				this.inventory.set(1, new ItemStack(Items.WATER_BUCKET));
 				this.setChanged();
 			} else SpacePlane.LOGGER.error("Too much water took back! Did you check the water amount?");
+		}
+	}
+
+	public void setSpeedByScreenSlider(int speed) {
+		if (speed <= 0 || speed >= MAX_SPEED) {
+			SpacePlane.LOGGER.error("FUCK YOU! Don't try to crash the TeaCon server by send incorrect speed value!");
+		} else if (this.isLit() && this.hasWater()) {
+			this.speed = speed;
+			this.setChanged();
 		}
 	}
 

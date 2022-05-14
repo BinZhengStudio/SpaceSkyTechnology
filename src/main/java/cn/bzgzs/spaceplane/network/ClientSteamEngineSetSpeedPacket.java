@@ -10,26 +10,21 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class ClientSteamEngineWaterIOPacket {
-	private final boolean isPourIn;
-	private final int amount;
+public class ClientSteamEngineSetSpeedPacket {
+	private final int speed;
 	private final BlockPos pos;
-
-	public ClientSteamEngineWaterIOPacket(FriendlyByteBuf buf) {
-		this.isPourIn = buf.readBoolean();
-		this.amount = buf.readInt();
+	public ClientSteamEngineSetSpeedPacket(FriendlyByteBuf buf) {
+		this.speed = buf.readInt();
 		this.pos = buf.readBlockPos();
 	}
 
-	public ClientSteamEngineWaterIOPacket(boolean isPourIn, int amount, BlockPos pos) {
-		this.isPourIn = isPourIn;
-		this.amount = amount;
+	public ClientSteamEngineSetSpeedPacket(int speed, BlockPos pos) {
+		this.speed = speed;
 		this.pos = pos;
 	}
 
 	public void encode(FriendlyByteBuf buf) {
-		buf.writeBoolean(isPourIn);
-		buf.writeInt(amount);
+		buf.writeInt(speed);
 		buf.writeBlockPos(pos);
 	}
 
@@ -39,7 +34,7 @@ public class ClientSteamEngineWaterIOPacket {
 			if (sender != null) {
 				Level level = context.get().getSender().getLevel();
 				BlockEntity blockEntity = level.getBlockEntity(pos);
-				if (blockEntity instanceof SteamEngineBlockEntity) ((SteamEngineBlockEntity) blockEntity).waterUseBucketIO(this.isPourIn, this.amount);
+				if (blockEntity instanceof SteamEngineBlockEntity) ((SteamEngineBlockEntity) blockEntity).setSpeedByScreenSlider(this.speed);
 			} else {
 				throw new NullPointerException("Fuck! Sender is NULL!");
 			}

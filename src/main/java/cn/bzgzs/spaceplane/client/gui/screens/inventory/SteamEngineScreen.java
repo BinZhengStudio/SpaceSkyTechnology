@@ -1,6 +1,7 @@
 package cn.bzgzs.spaceplane.client.gui.screens.inventory;
 
 import cn.bzgzs.spaceplane.SpacePlane;
+import cn.bzgzs.spaceplane.network.ClientSteamEngineSetSpeedPacket;
 import cn.bzgzs.spaceplane.network.ClientSteamEngineWaterIOPacket;
 import cn.bzgzs.spaceplane.network.NetworkHandler;
 import cn.bzgzs.spaceplane.world.inventory.SteamEngineMenu;
@@ -12,6 +13,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -19,6 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.gui.widget.ForgeSlider;
 
 @OnlyIn(Dist.CLIENT)
 public class SteamEngineScreen extends AbstractContainerScreen<SteamEngineMenu> {
@@ -42,6 +45,16 @@ public class SteamEngineScreen extends AbstractContainerScreen<SteamEngineMenu> 
 				NetworkHandler.INSTANCE.sendToServer(new ClientSteamEngineWaterIOPacket(false, 1000, new BlockPos(x, y, z)));
 			}
 		}));
+		this.addRenderableWidget(new ForgeSlider(this.leftPos + 28, this.topPos + 4, 115, 20, new TranslatableComponent("slider.steam_engine.speed"), new TextComponent(""), 1, SteamEngineBlockEntity.MAX_SPEED, this.menu.getData().get(0), true) {
+			@Override
+			public void onClick(double mouseX, double mouseY) { // 目前仅有鼠标点击才能更改其值，可能会改用SliderButton
+				super.onClick(mouseX, mouseY);
+				int x = SteamEngineScreen.this.menu.getData().get(5);
+				int y = SteamEngineScreen.this.menu.getData().get(6);
+				int z = SteamEngineScreen.this.menu.getData().get(7);
+				NetworkHandler.INSTANCE.sendToServer(new ClientSteamEngineSetSpeedPacket(this.getValueInt(), new BlockPos(x, y, z)));
+			}
+		});
 	}
 
 	@Override
@@ -52,12 +65,12 @@ public class SteamEngineScreen extends AbstractContainerScreen<SteamEngineMenu> 
 		TranslatableComponent speed = new TranslatableComponent("label.steam_engine.speed");
 		TranslatableComponent torque = new TranslatableComponent("label.steam_engine.torque");
 		TranslatableComponent waterAmount = new TranslatableComponent("label.steam_engine.water_amount");
-		this.font.draw(poseStack, speed, this.leftPos + 8, this.topPos + 23, 0x880000);
-		this.font.draw(poseStack, torque, this.leftPos + 8, this.topPos + 38, 0x826d00);
-		this.font.draw(poseStack, waterAmount, this.leftPos + 8, this.topPos + 53, 0x006ee4);
-		this.font.draw(poseStack, String.valueOf(this.menu.getData().get(0)), this.leftPos + 9 + this.font.width(speed), this.topPos + 23, 0x880000);
-		this.font.draw(poseStack, String.valueOf(this.menu.getData().get(1)), this.leftPos + 9 + this.font.width(torque), this.topPos + 38, 0x826d00);
-		this.font.draw(poseStack, String.valueOf(this.menu.getData().get(4)), this.leftPos + 9 + this.font.width(waterAmount), this.topPos + 53, 0x006ee4);
+		this.font.draw(poseStack, speed, this.leftPos + 8, this.topPos + 24, 0x880000);
+		this.font.draw(poseStack, torque, this.leftPos + 8, this.topPos + 39, 0x826d00);
+		this.font.draw(poseStack, waterAmount, this.leftPos + 8, this.topPos + 54, 0x006ee4);
+		this.font.draw(poseStack, Integer.toString(this.menu.getData().get(0)), this.leftPos + 9 + this.font.width(speed), this.topPos + 24, 0x880000);
+		this.font.draw(poseStack, Integer.toString(this.menu.getData().get(1)), this.leftPos + 9 + this.font.width(torque), this.topPos + 39, 0x826d00);
+		this.font.draw(poseStack, Integer.toString(this.menu.getData().get(4)), this.leftPos + 9 + this.font.width(waterAmount), this.topPos + 54, 0x006ee4);
 	}
 
 	@Override
