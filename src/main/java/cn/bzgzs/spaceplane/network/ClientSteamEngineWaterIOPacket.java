@@ -1,5 +1,6 @@
 package cn.bzgzs.spaceplane.network;
 
+import cn.bzgzs.spaceplane.SpacePlane;
 import cn.bzgzs.spaceplane.world.level.block.entity.SteamEngineBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -38,8 +39,12 @@ public class ClientSteamEngineWaterIOPacket {
 			ServerPlayer sender = context.get().getSender();
 			if (sender != null) {
 				Level level = context.get().getSender().getLevel();
-				BlockEntity blockEntity = level.getBlockEntity(pos);
-				if (blockEntity instanceof SteamEngineBlockEntity) ((SteamEngineBlockEntity) blockEntity).waterUseBucketIO(this.isPourIn, this.amount);
+				if (level.isLoaded(pos)) { // 检查当前BlockPos是否已加载，防止Waiting For Server，TODO 可能要服务端优化
+					BlockEntity blockEntity = level.getBlockEntity(pos);
+					if (blockEntity instanceof SteamEngineBlockEntity) ((SteamEngineBlockEntity) blockEntity).waterUseBucketIO(this.isPourIn, this.amount);
+				} else {
+					SpacePlane.LOGGER.error("FUCK YOU! Don't try to WAITING FOR SERVER the TeaCon!");
+				}
 			} else {
 				throw new NullPointerException("Fuck! Sender is NULL!");
 			}

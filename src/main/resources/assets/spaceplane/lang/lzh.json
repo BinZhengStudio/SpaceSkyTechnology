@@ -17,8 +17,7 @@
   "button.steam_engine.water_io": "入水/出水",
 
   "label.steam_engine.speed": "速(rps):",
-  "label.steam_engine.torque": "力:",
-  "label.steam_engine.water_amount": "水(mB):",
-
-  "slider.steam_engine.speed": "調速"
+  "label.steam_engine.speed_set": "調速(rps):",
+  "label.steam_engine.power": "功率:",
+  "label.steam_engine.water_amount": "水(mB):"
 }

@@ -17,8 +17,7 @@
   "button.steam_engine.water_io": "Pour In/Out",
 
   "label.steam_engine.speed": "Speed(rps):",
-  "label.steam_engine.torque": "Torque:",
-  "label.steam_engine.water_amount": "Water(mB):",
-
-  "slider.steam_engine.speed": "Speed Controller"
+  "label.steam_engine.speed_set": "Speed Set:",
+  "label.steam_engine.power": "Power:",
+  "label.steam_engine.water_amount": "Water(mB):"
 }

@@ -16,7 +16,7 @@ public class SteamEngineMenu extends AbstractContainerMenu {
 	private final ContainerData data;
 
 	public SteamEngineMenu(int id, Inventory inventory) {
-		this(id, inventory, new SimpleContainer(2), new SimpleContainerData(8));
+		this(id, inventory, new SimpleContainer(2), new SimpleContainerData(9));
 	}
 
 	public SteamEngineMenu(int id, Inventory inventory, Container container, ContainerData data) {
@@ -24,7 +24,7 @@ public class SteamEngineMenu extends AbstractContainerMenu {
 		this.container = container;
 		this.data = data;
 		checkContainerSize(container, 2);
-		checkContainerDataCount(data, 8);
+		checkContainerDataCount(data, 9);
 
 		this.addSlot(new Slot(container, 0, 70, 42)); // 燃料槽
 		this.addSlot(new Slot(container, 1, 111, 34) {

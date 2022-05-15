@@ -13,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.annotation.Nonnull;
 
 public class TransmissionRodBlockEntity extends BlockEntity {
-	private int speed,torque;
+	private int speed, power;
 	private BlockEntity engine;
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
 		@Override
@@ -22,8 +22,18 @@ public class TransmissionRodBlockEntity extends BlockEntity {
 		}
 
 		@Override
-		public float getTorque() {
-			return TransmissionRodBlockEntity.this.torque;
+		public void setSpeed(int speed) {
+			TransmissionRodBlockEntity.this.speed = speed;
+		}
+
+		@Override
+		public int getPower() {
+			return TransmissionRodBlockEntity.this.power;
+		}
+
+		@Override
+		public void setPower(int power) {
+			TransmissionRodBlockEntity.this.power = power;
 		}
 
 		@Override

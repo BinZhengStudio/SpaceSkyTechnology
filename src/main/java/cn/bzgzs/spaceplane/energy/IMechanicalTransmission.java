@@ -11,11 +11,24 @@ public interface IMechanicalTransmission {
 	 */
 	int getSpeed(); // TODO 可能要改成float
 
+	void setSpeed(int speed);
+
 	/**
-	 * 获取扭力，无单位，仅限输出源需要设置
+	 * 获取功率，无单位，仅限输出源需要设置
+	 * // TODO 以后可能添加单位
+	 * @return 功率
+	 */
+	int getPower();
+
+	void setPower(int power);
+
+	/**
+	 * 获取扭力，无单位
 	 * @return 扭力
 	 */
-	float getTorque();
+	default float getTorque() {
+		return (float) getPower() / getSpeed(); // TODO 可能产生问题
+	};
 
 	/**
 	 * 获取阻力数值，无单位。输出源也要设置，以处理多个输出源并联且速度不同的情况

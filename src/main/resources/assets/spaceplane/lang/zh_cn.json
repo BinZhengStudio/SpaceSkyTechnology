@@ -17,8 +17,8 @@
   "button.steam_engine.water_io": "倒入/倒出",
 
   "label.steam_engine.speed": "转速(rps):",
-  "label.steam_engine.torque": "扭力:",
-  "label.steam_engine.water_amount": "水量(mB):",
+  "label.steam_engine.speed_set": "设定转速(rps):",
+  "label.steam_engine.power": "功率:",
+  "label.steam_engine.water_amount": "水量(mB):"
 
-  "slider.steam_engine.speed": "转速调节"
 }
