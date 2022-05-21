@@ -30,15 +30,16 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
-	// 转速、设定的转速、功率、燃烧时间、总时间、水量、tick数（使每12tick才减waterAmount一次）
-	private int speed, setSpeed, power, burnTime, totalBurnTime, waterAmount, shrinkTick;
+	private float speed; // 转速
+	// 设定的转速、功率、燃烧时间、总时间、水量、tick数（使每12tick才减waterAmount一次）
+	private int setSpeed, power, burnTime, totalBurnTime, waterAmount, shrinkTick;
 	public static final int MAX_SPEED = 15, MAX_POWER = 150, MAX_WATER = 4000; // 最大转速，最大功率，最大水量
 	private final NonNullList<ItemStack> inventory = NonNullList.withSize(2, ItemStack.EMPTY);
-	private final ContainerData data = new ContainerData() { // 这个用于向客户端发送服务端的相关据数据
+	private final ContainerData data = new ContainerData() { // 用于向客户端发送服务端的相关数据
 		@Override
 		public int get(int index) {
 			return switch (index) {
-				case 0 -> speed;
+				case 0 -> (int) speed * 100; // 先乘以100再转换int，发送到客户端再除以100，保留2位小数
 				case 1 -> setSpeed;
 				case 2 -> power;
 				case 3 -> burnTime;
@@ -87,13 +88,13 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 
 	private final LazyOptional<IMechanicalTransmission> transmission = LazyOptional.of(() -> new IMechanicalTransmission() {
 		@Override
-		public int getSpeed() {
+		public float getSpeed() {
 			return SteamEngineBlockEntity.this.speed;
 		}
 
 		@Override
-		public void setSpeed(int speed) {
-			SteamEngineBlockEntity.this.setSpeed = speed;
+		public void setSpeed(float speed) {
+			SteamEngineBlockEntity.this.setSpeed = (int) speed;
 		}
 
 		@Override
@@ -134,54 +135,39 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 	public static void serverTick(Level world, BlockPos pos, BlockState state, SteamEngineBlockEntity blockEntity) {
 		boolean flag = false; // 是否需要setChanged
 
-		if (blockEntity.isLit()) {
-			--blockEntity.burnTime;
-			flag = true;
-		}
+		if (blockEntity.isLit()) { // 输出能量
+			--blockEntity.burnTime; // 减少燃烧时间
 
-		if (blockEntity.hasWater() && blockEntity.isLit()) {
-			if (blockEntity.shrinkTick <= 0) {
-				--blockEntity.waterAmount;
-				blockEntity.shrinkTick = 12; // 每12tick减一次waterAmount，这样水不会少的太快
-			} else {
-				--blockEntity.shrinkTick;
-			}
-			flag = true;
-		}
+			if (blockEntity.hasWater()) {
+				if (blockEntity.shrinkTick <= 0) { // 消耗水
+					--blockEntity.waterAmount;
+					blockEntity.shrinkTick = 12; // 每12tick减一次waterAmount，这样水不会少的太快
+				} else {
+					--blockEntity.shrinkTick;
+				}
 
-		if (!blockEntity.isLit() && blockEntity.hasWater()) { // 如果没有燃烧，并且有水，则消耗燃料并燃烧
-			ItemStack stack = blockEntity.inventory.get(0);
-			int time = ForgeHooks.getBurnTime(stack, null);
-			if (time > 0) {
-				stack.shrink(1);
-				blockEntity.burnTime = time;
-				blockEntity.totalBurnTime = time;
-				flag = true;
-			}
-		}
+				if (blockEntity.power < MAX_POWER) { // 增加功率，使之达到最大
+					++blockEntity.power;
+					blockEntity.speedAndPowerChanged();
+				}
 
-		if (blockEntity.isLit() && blockEntity.hasWater()) { // 输出能量
-			if (blockEntity.power < MAX_POWER) {
-				++blockEntity.power;
-				blockEntity.speedAndPowerChanged();
-				flag = true;
-			}
-			if (blockEntity.setSpeed <= MAX_SPEED && blockEntity.setSpeed > 0) { // 检查设定的转速是否正确
-				if (blockEntity.speed < blockEntity.setSpeed) {
+				if (blockEntity.setSpeed <= MAX_SPEED && blockEntity.setSpeed > 0) { // 检查设定的转速是否正确
+					if (blockEntity.speed < blockEntity.setSpeed) {
+						++blockEntity.speed;
+						blockEntity.speedAndPowerChanged();
+					} else if (blockEntity.speed > blockEntity.setSpeed) {
+						--blockEntity.speed;
+						blockEntity.speedAndPowerChanged();
+					}
+				} else if (blockEntity.speed < MAX_SPEED) {
 					++blockEntity.speed;
 					blockEntity.speedAndPowerChanged();
-					flag = true;
-				} else if (blockEntity.speed > blockEntity.setSpeed) {
-					--blockEntity.speed;
-					blockEntity.speedAndPowerChanged();
-					flag = true;
 				}
-			} else if (blockEntity.speed < MAX_SPEED) {
-				++blockEntity.speed;
-				blockEntity.speedAndPowerChanged();
-				flag = true;
 			}
-		} else {
+			flag = true;
+		}
+
+		if (!blockEntity.isLit() || !blockEntity.hasWater()) {
 			if (blockEntity.power > 0) {
 				--blockEntity.power;
 				if (blockEntity.speed < blockEntity.setSpeed) {
@@ -195,6 +181,17 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 			if (blockEntity.speed > 0 && blockEntity.power <= 0) {
 				--blockEntity.speed;
 				blockEntity.speedAndPowerChanged();
+				flag = true;
+			}
+		}
+
+		if (!blockEntity.isLit() && blockEntity.hasWater()) { // 如果没有燃烧，并且有水，则消耗燃料并燃烧
+			ItemStack stack = blockEntity.inventory.get(0);
+			int time = ForgeHooks.getBurnTime(stack, null);
+			if (time > 0) {
+				stack.shrink(1);
+				blockEntity.burnTime = time;
+				blockEntity.totalBurnTime = time;
 				flag = true;
 			}
 		}
@@ -258,28 +255,26 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 	public void load(CompoundTag tag) {
 		super.load(tag);
 		ContainerHelper.loadAllItems(tag, this.inventory);
-		this.speed = tag.getInt("Speed");
+		this.speed = tag.getFloat("Speed");
 		this.setSpeed = tag.getInt("SetSpeed");
 		this.power = tag.getInt("Power");
 		this.burnTime = tag.getInt("BurnTime");
 		this.totalBurnTime = tag.getInt("TotalBurnTime");
 		this.waterAmount = tag.getInt("WaterAmount");
 		this.shrinkTick = tag.getInt("ShrinkTick");
-		// TODO 读取其他数据
 	}
 
 	@Override
 	protected void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
 		ContainerHelper.saveAllItems(tag, this.inventory);
-		tag.putInt("Speed", this.speed);
+		tag.putFloat("Speed", this.speed);
 		tag.putInt("SetSpeed", this.setSpeed);
 		tag.putInt("Power", this.power);
 		tag.putInt("BurnTime", this.burnTime);
 		tag.putInt("TotalBurnTime", this.totalBurnTime);
 		tag.putInt("WaterAmount", this.waterAmount);
 		tag.putInt("ShrinkTick", this.shrinkTick);
-		// TODO 存储其他数据
 	}
 
 	@Override

@@ -9,13 +9,12 @@ public interface IMechanicalTransmission {
 	 * 获取转速，单位为rps（1s=20tick）
 	 * @return 每秒转动圈数
 	 */
-	int getSpeed(); // TODO 可能要改成float
+	float getSpeed();
 
-	void setSpeed(int speed);
+	void setSpeed(float speed);
 
 	/**
-	 * 获取功率，无单位，仅限输出源需要设置
-	 * // TODO 以后可能添加单位
+	 * 获取功率，单位TE(ThreebodyEnergy)/s，仅限输出源需要设置
 	 * @return 功率
 	 */
 	int getPower();
@@ -32,6 +31,7 @@ public interface IMechanicalTransmission {
 
 	/**
 	 * 获取阻力数值，无单位。输出源也要设置，以处理多个输出源并联且速度不同的情况
+	 * 可能会因为工作量问题而不使用这个方法
 	 * @return 阻力
 	 */
 	float getResistance();

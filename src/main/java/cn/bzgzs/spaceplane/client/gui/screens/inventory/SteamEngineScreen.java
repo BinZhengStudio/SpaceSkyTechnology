@@ -73,11 +73,10 @@ public class SteamEngineScreen extends AbstractContainerScreen<SteamEngineMenu> 
 		this.font.draw(poseStack, speed, this.leftPos + 8, this.topPos + 24, 0x880000);
 		this.font.draw(poseStack, power, this.leftPos + 8, this.topPos + 39, 0x826d00);
 		this.font.draw(poseStack, waterAmount, this.leftPos + 8, this.topPos + 54, 0x006ee4);
-		this.font.draw(poseStack, Integer.toString(this.menu.getData().get(0)), this.leftPos + 9 + this.font.width(speed), this.topPos + 24, 0x880000);
+		this.font.draw(poseStack, Float.toString(this.menu.getData().get(0) / 100.0F), this.leftPos + 9 + this.font.width(speed), this.topPos + 24, 0x880000);
 		this.font.draw(poseStack, Integer.toString(this.menu.getData().get(2)), this.leftPos + 9 + this.font.width(power), this.topPos + 39, 0x826d00);
 		this.font.draw(poseStack, Integer.toString(this.menu.getData().get(5)), this.leftPos + 9 + this.font.width(waterAmount), this.topPos + 54, 0x006ee4);
 
-		int d = this.menu.getData().get(1);
 		int setSpeedX = this.leftPos + this.font.width(this.title) + 10;
 		this.font.draw(poseStack, setSpeed, setSpeedX, this.topPos + 6, 0x885600);
 		this.font.draw(poseStack, Integer.toString(this.menu.getData().get(1)), setSpeedX + this.font.width(setSpeed) + 1, this.topPos + 6, 0x885600);
