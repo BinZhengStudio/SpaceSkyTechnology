@@ -1,7 +1,9 @@
 package cn.bzgzs.spaceplane;
 
 import cn.bzgzs.spaceplane.client.gui.screens.MenuScreenManager;
+import cn.bzgzs.spaceplane.client.renderer.entity.EntityRendererManager;
 import cn.bzgzs.spaceplane.network.NetworkHandler;
+import cn.bzgzs.spaceplane.world.entity.EntityTypeList;
 import cn.bzgzs.spaceplane.world.inventory.MenuTypeList;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.level.block.BlockList;
@@ -22,6 +24,7 @@ public class SpacePlane {
 	public SpacePlane() {
 		BlockList.BLOCKS.register(FMLJavaModLoadingContext.get().getModEventBus()); // 注册方块
 		BlockEntityTypeList.BLOCK_ENTITY_TYPE.register(FMLJavaModLoadingContext.get().getModEventBus()); // 注册方块实体
+		EntityTypeList.ENTITY_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus()); // 注册实体
 		ItemList.ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus()); // 注册物品
 		MenuTypeList.MENU_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus()); // 注册Container
 
@@ -36,5 +39,6 @@ public class SpacePlane {
 
 	private void doClientStuff(final FMLClientSetupEvent event) { // 与客户端相关的代码
 		event.enqueueWork(MenuScreenManager::register); // 绑定Container与Screen
+		EntityRendererManager.register(); // 注册实体渲染
 	}
 }
