@@ -10,5 +10,5 @@ import net.minecraftforge.registries.RegistryObject;
 public class EntityTypeList {
 	public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITIES, SpacePlane.MODID);
 
-	public static final RegistryObject<EntityType<J20PlaneEntity>> J20_PLANE = ENTITY_TYPES.register("j20_plane", () -> EntityType.Builder.of(J20PlaneEntity::new, MobCategory.MISC).sized(5, 5).build("j20_plane"));
+	public static final RegistryObject<EntityType<BZ20PlaneEntity>> BZ_20_PLANE = ENTITY_TYPES.register("bz_20_plane", () -> EntityType.Builder.of(BZ20PlaneEntity::new, MobCategory.MISC).sized(5, 5).build("bz_20_plane"));
 }

@@ -5,6 +5,6 @@ import net.minecraft.client.renderer.entity.EntityRenderers;
 
 public class EntityRendererManager {
 	public static void register() {
-		EntityRenderers.register(EntityTypeList.J20_PLANE.get(), J20PlaneRenderer::new);
+		EntityRenderers.register(EntityTypeList.BZ_20_PLANE.get(), BZ20PlaneRenderer::new);
 	}
 }

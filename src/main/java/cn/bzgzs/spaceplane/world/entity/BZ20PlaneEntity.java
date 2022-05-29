@@ -6,8 +6,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-public class J20PlaneEntity extends BasePlaneEntity {
-	public J20PlaneEntity(EntityType<?> type, Level level) {
+public class BZ20PlaneEntity extends BasePlaneEntity {
+	public BZ20PlaneEntity(EntityType<?> type, Level level) {
 		super(type, level);
 	}
 
