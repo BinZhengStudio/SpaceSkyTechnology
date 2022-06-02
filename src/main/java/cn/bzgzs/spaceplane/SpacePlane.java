@@ -1,6 +1,7 @@
 package cn.bzgzs.spaceplane;
 
 import cn.bzgzs.spaceplane.client.gui.screens.MenuScreenManager;
+import cn.bzgzs.spaceplane.client.player.KeyboardInputList;
 import cn.bzgzs.spaceplane.client.renderer.entity.EntityRendererManager;
 import cn.bzgzs.spaceplane.network.NetworkHandler;
 import cn.bzgzs.spaceplane.world.entity.EntityTypeList;
@@ -40,5 +41,6 @@ public class SpacePlane {
 	private void doClientStuff(final FMLClientSetupEvent event) { // 与客户端相关的代码
 		event.enqueueWork(MenuScreenManager::register); // 绑定Container与Screen
 		EntityRendererManager.register(); // 注册实体渲染
+		KeyboardInputList.register(); // 注册按键
 	}
 }
