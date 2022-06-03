@@ -37,6 +37,8 @@ public abstract class BasePlaneEntity extends Entity {
 	protected static final EntityDataAccessor<Float> ACCEL_X = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
 	protected static final EntityDataAccessor<Float> ACCEL_Y = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
 	protected static final EntityDataAccessor<Float> ACCEL_Z = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
+	// 爬升和下降的速度
+	protected static final EntityDataAccessor<Float> CLIMB_AND_DECLINE_SPEED = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
 	// 各轴的旋转方向，代表X、Y、Z轴，均采用弧度制
 	protected static final EntityDataAccessor<Float> PITCH = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
 	protected static final EntityDataAccessor<Float> YAW = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
@@ -56,7 +58,6 @@ public abstract class BasePlaneEntity extends Entity {
 	// 爬升与下降
 	protected static final EntityDataAccessor<Boolean> CLIMBING_UP = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	protected static final EntityDataAccessor<Boolean> DECLINING = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	public boolean climbingUp = false, declining = false;
 
 	public BasePlaneEntity(EntityType<?> type, Level level) {
 		super(type, level);
@@ -71,6 +72,7 @@ public abstract class BasePlaneEntity extends Entity {
 		this.entityData.define(ACCEL_X, 0.0F); // X轴加速度
 		this.entityData.define(ACCEL_Y, 0.0F); // Y轴加速度
 		this.entityData.define(ACCEL_Z, 0.0F); // Z轴加速度
+		this.entityData.define(CLIMB_AND_DECLINE_SPEED, 0.0F); // 爬升和下降速度
 		this.entityData.define(PITCH, 0.0F); // X轴旋转
 		this.entityData.define(YAW, 0.0F); // Y轴旋转
 		this.entityData.define(ROLL, 0.0F); // Z轴旋转
@@ -190,40 +192,83 @@ public abstract class BasePlaneEntity extends Entity {
 		return this.getRiderOffset().add(0, this.getEyeHeight(), 0).xRot(pitch).yRot((float) yaw).zRot((float) roll);
 	}
 
-	public void climbUp(boolean cancel) {
-		if (!this.climbingUp && !cancel) {
-			this.entityData.set(Y_SPEED, this.entityData.get(Y_SPEED) + this.getClimbAndDeclineAccel());
-			this.climbingUp = true;
-		} else if (this.climbingUp && cancel) {
-			this.entityData.set(Y_SPEED, this.entityData.get(Y_SPEED) - this.getClimbAndDeclineAccel());
-			this.climbingUp = false;
-		}
+	private Vec3 calculateResistance() { // TODO 需要修改
+		Vec3 vec3 = Vec3.ZERO;
+		Vec3 motion = this.getDeltaMovement();
+		vec3.add(motion).scale(-0.1);
+		return this.getDeltaMovement().scale(-0.1);
 	}
 
-	public void decline(boolean cancel) {
-		if (!this.declining && !cancel) {
-			this.entityData.set(Y_SPEED, this.entityData.get(Y_SPEED) - this.getClimbAndDeclineAccel());
-			this.declining = true;
-		} else if (this.declining && cancel) {
-			this.entityData.set(Y_SPEED, this.entityData.get(Y_SPEED) + this.getClimbAndDeclineAccel());
-			this.declining = false;
-		}
+	private Vec3 calculateMotion() { // TODO 还需要加入其他的速度
+		float climb = this.entityData.get(CLIMB_AND_DECLINE_SPEED);
+		Vec3 vec3 = new Vec3(0, climb, 0);
+//		vec3.add(this.calculateResistance());
+		return vec3;
+//		Vec3 vector3d = this.getDeltaMovement();
+//		double d0 = this.getX() + vector3d.x;
+//		double d1 = this.getY() + vector3d.y;
+//		double d2 = this.getZ() + vector3d.z;
+//		if (vector3d.y - this.getClimbAndDeclineAccel() < -this.getMaxClimbAndDeclineSpeed()) {
+//			this.setDeltaMovement(new Vec3(0, -this.getMaxClimbAndDeclineSpeed(), 0));
+//		} else {
+//			this.setDeltaMovement(this.getDeltaMovement().add(0,-this.getClimbAndDeclineAccel(), 0));
+//		}
+//		this.setPos(d0, d1, d2);
 	}
 
 	@Override
 	public void tick() {
 		if (!this.isRemoved() && this.level.isLoaded(new BlockPos(this.getX(), this.getY(), this.getZ()))) {
 			super.tick();
-			Vec3 motion = this.getDeltaMovement();
-			double x = this.getX() + motion.x;
-			double y = this.getY() + motion.y;
-			double z = this.getZ() + motion.z;
+			if (this.entityData.get(CLIMBING_UP)) {
+				this.entityData.set(CLIMB_AND_DECLINE_SPEED, Math.min(this.getMaxClimbAndDeclineSpeed(), this.entityData.get(CLIMB_AND_DECLINE_SPEED) + this.getClimbAndDeclineAccel()));
+			}
+
+			if (this.entityData.get(DECLINING)) {
+				this.entityData.set(CLIMB_AND_DECLINE_SPEED, Math.max(-this.getMaxClimbAndDeclineSpeed(), this.entityData.get(CLIMB_AND_DECLINE_SPEED) - this.getClimbAndDeclineAccel()));
+			}
+
+			Vec3 vector3d = this.getDeltaMovement();
+			double d0 = this.getX() + vector3d.x;
+			double d1 = this.getY() + vector3d.y;
+			double d2 = this.getZ() + vector3d.z;
+			this.setDeltaMovement(this.calculateMotion());
+			this.setDeltaMovement(this.getDeltaMovement().add(this.calculateResistance()));
+			this.setPos(d0, d1, d2);
 		}
 	}
 
 	@Override
 	public boolean hurt(DamageSource pSource, float pAmount) { // TODO 根据子弹、炮弹等调整
 		return super.hurt(pSource, pAmount);
+	}
+
+	public void setInput(int key, boolean isDown) {
+		if (isDown) {
+			switch (key) {
+				case 0 -> System.out.println("按下了W");
+				case 1 -> System.out.println("按下了a");
+				case 2 -> System.out.println("按下了s");
+				case 3 -> System.out.println("按下了d");
+				case 4 -> this.entityData.set(CLIMBING_UP, true);
+				case 5 -> System.out.println("left");
+				case 6 -> this.entityData.set(DECLINING, true);
+				case 7 -> System.out.println("right");
+				case 8 -> System.out.println("按下了space");
+			}
+		} else {
+			switch (key) {
+				case 0 -> System.out.println("按下了W-");
+				case 1 -> System.out.println("按下了a-");
+				case 2 -> System.out.println("按下了s-");
+				case 3 -> System.out.println("按下了d-");
+				case 4 -> this.entityData.set(CLIMBING_UP, false);
+				case 5 -> System.out.println("left-");
+				case 6 -> this.entityData.set(DECLINING, false);
+				case 7 -> System.out.println("right-");
+				case 8 -> System.out.println("按下了space-");
+			}
+		}
 	}
 
 	/**
@@ -251,6 +296,7 @@ public abstract class BasePlaneEntity extends Entity {
 	@Override
 	public InteractionResult interact(Player player, InteractionHand hand) {
 		if (!this.level.isClientSide) {
+			player.stopRiding();
 			return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
 		}
 		return InteractionResult.PASS;

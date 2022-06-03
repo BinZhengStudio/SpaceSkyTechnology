@@ -13,6 +13,7 @@ public class NetworkHandler {
 	public static void register() {
 		INSTANCE.messageBuilder(ClientSteamEngineWaterIOPacket.class, getId()).encoder(ClientSteamEngineWaterIOPacket::encode).decoder(ClientSteamEngineWaterIOPacket::new).consumer(ClientSteamEngineWaterIOPacket::consumer).add();
 		INSTANCE.messageBuilder(ClientSteamEngineSetSpeedPacket.class, getId()).encoder(ClientSteamEngineSetSpeedPacket::encode).decoder(ClientSteamEngineSetSpeedPacket::new).consumer(ClientSteamEngineSetSpeedPacket::consumer).add();
+		INSTANCE.messageBuilder(ClientPlaneKeyboardInputPacket.class, getId()).encoder(ClientPlaneKeyboardInputPacket::encode).decoder(ClientPlaneKeyboardInputPacket::new).consumer(ClientPlaneKeyboardInputPacket::consumer).add();
 	}
 
 	public static int getId() {

@@ -242,7 +242,7 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		}
 	}
 
-	public void setSpeedByScreenSlider(int speed) {
+	public void setSpeedByScreenButton(int speed) {
 		if (speed <= 0 || speed > MAX_SPEED) {
 			SpacePlane.LOGGER.error("FUCK YOU! Don't try to crash the TeaCon server by send incorrect speed value!");
 		} else {
