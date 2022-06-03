@@ -6,7 +6,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
@@ -34,10 +33,9 @@ public class ClientSteamEngineSetSpeedPacket {
 		context.get().enqueueWork(() -> {
 			ServerPlayer sender = context.get().getSender();
 			if (sender != null) {
-				Level level = context.get().getSender().getLevel();
+				Level level = sender.getLevel();
 				if (level.isLoaded(pos)) { // 检查当前BlockPos是否已加载，防止Waiting For Server，TODO 可能要服务端优化
-					BlockEntity blockEntity = level.getBlockEntity(pos);
-					if (blockEntity instanceof SteamEngineBlockEntity) ((SteamEngineBlockEntity) blockEntity).setSpeedByScreenSlider(this.speed);
+					if (level.getBlockEntity(pos) instanceof SteamEngineBlockEntity blockEntity) blockEntity.setSpeedByScreenButton(this.speed);
 				} else {
 					SpacePlane.LOGGER.error("FUCK YOU! Don't try to WAITING FOR SERVER the TeaCon!");
 				}
