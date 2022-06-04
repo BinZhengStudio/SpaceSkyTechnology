@@ -20,8 +20,13 @@ public class BZ20PlaneEntity extends BasePlaneEntity {
 	}
 
 	@Override
-	public int getMaxPower() {
-		return 0;
+	public float getMaxPower() {
+		return 5.0F;
+	}
+
+	@Override
+	public float getPowerAccel() {
+		return 0.25F;
 	}
 
 	@Override
@@ -52,6 +57,26 @@ public class BZ20PlaneEntity extends BasePlaneEntity {
 	@Override
 	public float getMaxClimbAndDeclineSpeed() {
 		return 0.5F;
+	}
+
+	@Override
+	public float getLandingGearHeight() {
+		return 1.0F;
+	}
+
+	@Override
+	public float getResistanceFuncX(float speed) {
+		return 0;
+	}
+
+	@Override
+	public float getResistanceFuncY(float speed) {
+		return 0.1F * speed * speed;
+	}
+
+	@Override
+	public float getResistanceFuncZ(float speed) {
+		return 0.2F * speed * speed;
 	}
 
 	@Override

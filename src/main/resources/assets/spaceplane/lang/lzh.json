@@ -18,6 +18,8 @@
 
   "label.steam_engine.speed": "速(rps):",
   "label.steam_engine.speed_set": "調速(rps):",
-  "label.steam_engine.power": "功率:",
-  "label.steam_engine.water_amount": "水(mB):"
+  "label.steam_engine.power": "功率(TE/s):",
+  "label.steam_engine.water_amount": "水(mB):",
+
+  "key.category.spaceplane.plane_control" : "飛控"
 }

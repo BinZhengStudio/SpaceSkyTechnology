@@ -17,7 +17,13 @@
   "button.steam_engine.water_io": "Pour In/Out",
 
   "label.steam_engine.speed": "Speed(rps):",
-  "label.steam_engine.speed_set": "Speed Set:",
-  "label.steam_engine.power": "Power:",
-  "label.steam_engine.water_amount": "Water(mB):"
+  "label.steam_engine.speed_set": "Speed Set(rps):",
+  "label.steam_engine.power": "Power(TE/s):",
+  "label.steam_engine.water_amount": "Water(mB):",
+
+  "key.category.spaceplane.plane_control" : "Plane Control",
+
+  "key.spaceplane.engine_on": "Engine On",
+  "key.spaceplane.climb_up" : "Climb Up",
+  "key.spaceplane.decline" : "Decline"
 }

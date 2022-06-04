@@ -1,6 +1,5 @@
 package cn.bzgzs.spaceplane.client.event;
 
-import cn.bzgzs.spaceplane.SpacePlane;
 import cn.bzgzs.spaceplane.client.player.KeyboardInputList;
 import cn.bzgzs.spaceplane.network.ClientPlaneKeyboardInputPacket;
 import cn.bzgzs.spaceplane.network.NetworkHandler;
@@ -42,9 +41,8 @@ public class ClientEventHandler {
 				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneKeyboardInputPacket(4, KeyboardInputList.CLIMB_UP.isDown()));
 				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneKeyboardInputPacket(6, KeyboardInputList.DECLINE.isDown()));
 				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneKeyboardInputPacket(8, Minecraft.getInstance().options.keyJump.isDown()));
+				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneKeyboardInputPacket(9, KeyboardInputList.ENGINE_ON.isDown()));
 			}
-		} else {
-			SpacePlane.LOGGER.error("Fuck You! Player is null");
 		}
 	}
 }

@@ -18,7 +18,12 @@
 
   "label.steam_engine.speed": "转速(rps):",
   "label.steam_engine.speed_set": "设定转速(rps):",
-  "label.steam_engine.power": "功率:",
-  "label.steam_engine.water_amount": "水量(mB):"
+  "label.steam_engine.power": "功率(TE/s):",
+  "label.steam_engine.water_amount": "水量(mB):",
 
+  "key.category.spaceplane.plane_control" : "飞机控制",
+
+  "key.spaceplane.engine_on": "引擎开启",
+  "key.spaceplane.climb_up" : "爬升",
+  "key.spaceplane.decline" : "下降"
 }

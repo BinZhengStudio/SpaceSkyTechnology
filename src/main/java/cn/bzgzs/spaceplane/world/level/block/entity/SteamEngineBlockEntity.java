@@ -55,28 +55,14 @@ public class SteamEngineBlockEntity extends BaseContainerBlockEntity {
 		@Override
 		public void set(int index, int value) { // 这个是让在服务端的Menu中也能更改BlockEntity的数据
 			switch (index) {
-				case 0:
-					speed = value;
-					break;
-				case 1:
-					setSpeed = value;
-					break;
-				case 2:
-					power = value;
-					break;
-				case 3:
-					burnTime = value;
-					break;
-				case 4:
-					totalBurnTime = value;
-					break;
-				case 5:
-					waterAmount = value;
-					break;
-				case 6: // BlockPos不能更改
-				case 7:
-				case 8:
-					break;
+				case 0 -> speed = value;
+				case 1 -> setSpeed = value;
+				case 2 -> power = value;
+				case 3 -> burnTime = value;
+				case 4 -> totalBurnTime = value;
+				case 5 -> waterAmount = value;
+				// BlockPos不能更改
+				default -> {}
 			}
 		}
 
