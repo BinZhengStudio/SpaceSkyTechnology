@@ -7,23 +7,27 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class ClientPlaneKeyboardInputPacket {
-	private final int index;
-	private final boolean isDown;
+public class ClientPlaneControlPacket {
+	private final boolean left;
+	private final boolean right;
+	private final boolean speedUp;
 
-	public ClientPlaneKeyboardInputPacket(FriendlyByteBuf buf) {
-		this.index = buf.readInt();
-		this.isDown = buf.readBoolean();
+	public ClientPlaneControlPacket(FriendlyByteBuf buf) {
+		this.left = buf.readBoolean();
+		this.right = buf.readBoolean();
+		this.speedUp = buf.readBoolean();
 	}
 
-	public ClientPlaneKeyboardInputPacket(int index, boolean isDown) {
-		this.index = index;
-		this.isDown = isDown;
+	public ClientPlaneControlPacket(boolean left, boolean right, boolean speedUp) {
+		this.left = left;
+		this.right = right;
+		this.speedUp = speedUp;
 	}
 
 	public void encode(FriendlyByteBuf buf) {
-		buf.writeInt(index);
-		buf.writeBoolean(isDown);
+		buf.writeBoolean(left);
+		buf.writeBoolean(right);
+		buf.writeBoolean(speedUp);
 	}
 
 	public void consumer(Supplier<NetworkEvent.Context> context) {
@@ -31,7 +35,7 @@ public class ClientPlaneKeyboardInputPacket {
 			ServerPlayer sender = context.get().getSender();
 			if (sender != null) {
 				if (sender.getVehicle() instanceof BasePlaneEntity plane) {
-					plane.setInput(index, isDown);
+//					plane.setInput(index, speedUp);
 				}
 			} else {
 				throw new NullPointerException("Fuck! Sender is NULL!");

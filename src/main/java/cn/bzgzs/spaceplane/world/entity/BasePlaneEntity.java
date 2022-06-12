@@ -21,6 +21,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AirBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 
@@ -248,20 +250,22 @@ public abstract class BasePlaneEntity extends Entity {
 	public void tick() {
 		if (!this.isRemoved() && this.level.isLoaded(new BlockPos(this.getX(), this.getY(), this.getZ()))) {
 			// 处理发动机的输出功率，即加速度
-			if (this.entityData.get(ENGINE_ON) && this.entityData.get(ENGINE_START)) {
-				if (this.entityData.get(POWER) < this.getMaxPower()) {
-					this.entityData.set(POWER, this.entityData.get(POWER) + Math.min(this.getPowerAccel(), this.getMaxPower() - this.entityData.get(POWER)));
-				} else if (this.entityData.get(POWER) > this.getMaxPower()) {
-					this.entityData.set(POWER, this.getMaxPower());
-				}
-			} else {
-				if (this.entityData.get(POWER) > 0) {
-					this.entityData.set(POWER, this.entityData.get(POWER) - Math.min(this.getPowerAccel(), this.entityData.get(POWER)));
-				} else if (this.entityData.get(POWER) < 0) {
-					this.entityData.set(POWER, 0.0F);
+			if (this.entityData.get(ENGINE_ON)) {
+				if (this.entityData.get(ENGINE_START)) {
+					if (this.entityData.get(POWER) < this.getMaxPower()) {
+						this.entityData.set(POWER, this.entityData.get(POWER) + Math.min(this.getPowerAccel(), this.getMaxPower() - this.entityData.get(POWER)));
+					} else if (this.entityData.get(POWER) > this.getMaxPower()) {
+						this.entityData.set(POWER, this.getMaxPower());
+					}
+				} else {
+					if (this.entityData.get(POWER) > 0) {
+						this.entityData.set(POWER, this.entityData.get(POWER) - Math.min(this.getPowerAccel(), this.entityData.get(POWER)));
+					} else if (this.entityData.get(POWER) < 0) {
+						this.entityData.set(POWER, 0.0F);
+					}
+
 				}
 			}
-
 			// 处理飞机运动
 			Vec3 vector3d = this.getDeltaMovement();
 			double d0 = this.getX() + vector3d.x;
@@ -307,32 +311,46 @@ public abstract class BasePlaneEntity extends Entity {
 		return super.hurt(pSource, pAmount);
 	}
 
-	public void setInput(int key, boolean isDown) {
+	public void setInput(int index, boolean isDown) {
 		if (isDown) {
-			switch (key) {
-				case 0 -> System.out.println("按下了W");
-				case 1 -> System.out.println("按下了a");
-				case 2 -> System.out.println("按下了s");
-				case 3 -> System.out.println("按下了d");
+			switch (index) {
+				case 0, 1, 2, 3, 5, 7, 9 -> {}
 				case 4 -> this.entityData.set(CLIMBING_UP, true);
-				case 5 -> System.out.println("left");
 				case 6 -> this.entityData.set(DECLINING, true);
-				case 7 -> System.out.println("right");
 				case 8 -> this.entityData.set(ENGINE_START, true);
-				case 9 -> {
+			}
+		} else {
+			switch (index) {
+				case 0, 1, 2, 3, 5, 7 -> {}
+				case 4 -> this.entityData.set(CLIMBING_UP, false);
+				case 6 -> this.entityData.set(DECLINING, false);
+				case 8 -> this.entityData.set(ENGINE_START, false);
+				case 9 -> this.entityData.set(ENGINE_ON, !this.entityData.get(ENGINE_ON));
+			}
+		}
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	public void setClientInput(int index, boolean isDown) {
+		if (isDown) {
+			switch (index) {
+				case 0, 1, 2, 3, 5, 7, 9 -> {}
+				case 4 -> this.entityData.set(CLIMBING_UP, true);
+				case 6 -> this.entityData.set(DECLINING, true);
+				case 8 -> {
+					this.entityData.set(ENGINE_START, true);
+					System.out.println("开始");
 				}
 			}
 		} else {
-			switch (key) {
-				case 0 -> System.out.println("按下了W-");
-				case 1 -> System.out.println("按下了a-");
-				case 2 -> System.out.println("按下了s-");
-				case 3 -> System.out.println("按下了d-");
+			switch (index) {
+				case 0, 1, 2, 3, 5, 7 -> {}
 				case 4 -> this.entityData.set(CLIMBING_UP, false);
-				case 5 -> System.out.println("left-");
 				case 6 -> this.entityData.set(DECLINING, false);
-				case 7 -> System.out.println("right-");
-				case 8 -> this.entityData.set(ENGINE_START, false);
+				case 8 -> {
+					this.entityData.set(ENGINE_START, false);
+					System.out.println("engine stop");
+				}
 				case 9 -> this.entityData.set(ENGINE_ON, !this.entityData.get(ENGINE_ON));
 			}
 		}
