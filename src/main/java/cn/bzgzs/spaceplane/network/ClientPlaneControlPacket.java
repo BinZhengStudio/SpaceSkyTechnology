@@ -1,6 +1,6 @@
 package cn.bzgzs.spaceplane.network;
 
-import cn.bzgzs.spaceplane.world.entity.BasePlaneEntity;
+import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -13,29 +13,29 @@ public class ClientPlaneControlPacket {
 	private final boolean speedUp;
 
 	public ClientPlaneControlPacket(FriendlyByteBuf buf) {
+		this.speedUp = buf.readBoolean();
 		this.left = buf.readBoolean();
 		this.right = buf.readBoolean();
-		this.speedUp = buf.readBoolean();
 	}
 
-	public ClientPlaneControlPacket(boolean left, boolean right, boolean speedUp) {
+	public ClientPlaneControlPacket(boolean speedUp, boolean left, boolean right) {
+		this.speedUp = speedUp;
 		this.left = left;
 		this.right = right;
-		this.speedUp = speedUp;
 	}
 
 	public void encode(FriendlyByteBuf buf) {
+		buf.writeBoolean(speedUp);
 		buf.writeBoolean(left);
 		buf.writeBoolean(right);
-		buf.writeBoolean(speedUp);
 	}
 
 	public void consumer(Supplier<NetworkEvent.Context> context) {
 		context.get().enqueueWork(() -> {
 			ServerPlayer sender = context.get().getSender();
 			if (sender != null) {
-				if (sender.getVehicle() instanceof BasePlaneEntity plane) {
-//					plane.setInput(index, speedUp);
+				if (sender.getVehicle() instanceof TestPlaneEntity plane) {
+					plane.setControlState(speedUp, left, right);
 				}
 			} else {
 				throw new NullPointerException("Fuck! Sender is NULL!");

@@ -31,7 +31,9 @@ import java.util.List;
 
 public class TestPlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	private static final EntityDataAccessor<Boolean> ENGINE_START = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> SPEED_UP = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> LEFT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> RIGHT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	public static final int LANDING_GEAR_HEIGHT = 2;
 	private float invFriction;
 	private float outOfControlTicks;
@@ -73,7 +75,9 @@ public class TestPlaneEntity extends Entity {
 	@Override
 	protected void defineSynchedData() {
 		this.entityData.define(ENGINE_ON, false);
-		this.entityData.define(ENGINE_START, false);
+		this.entityData.define(SPEED_UP, false);
+		this.entityData.define(LEFT, false);
+		this.entityData.define(RIGHT, false);
 	}
 
 	public boolean canCollideWith(Entity entity) {
@@ -150,7 +154,7 @@ public class TestPlaneEntity extends Entity {
 			this.calculateLift(); // TODO 升力
 			if (this.level.isClientSide) {
 				this.controlPlane();
-//				this.level.sendPacketToServer(new ServerboundPaddleBoatPacket(this.getPaddleState(0), this.getPaddleState(1)));
+//				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(this.getSpeedUp(), this.getLeft(), this.getRight()));
 			}
 
 			this.move(MoverType.SELF, this.getDeltaMovement());
@@ -189,10 +193,34 @@ public class TestPlaneEntity extends Entity {
 		}
 	}
 
-	private void setControlState(boolean left, boolean right, boolean speedUp) {
-		this.inputLeft = left;
-		this.inputRight = right;
-		this.inputSpeedUp = speedUp;
+	public void setControlState(boolean speedUp, boolean left, boolean right) {
+		this.setSpeedUp(speedUp);
+		this.setLeft(left);
+		this.setRight(right);
+	}
+
+	public boolean getSpeedUp() {
+		return this.entityData.get(SPEED_UP);
+	}
+
+	private void setSpeedUp(boolean speedUp) {
+		this.entityData.set(SPEED_UP, speedUp);
+	}
+
+	public boolean getLeft() {
+		return this.entityData.get(LEFT);
+	}
+
+	private void setLeft(boolean left) {
+		this.entityData.set(LEFT, left);
+	}
+
+	public boolean getRight() {
+		return this.entityData.get(RIGHT);
+	}
+
+	private void setRight(boolean right) {
+		this.entityData.set(RIGHT, right);
 	}
 
 	private TestPlaneEntity.Status getStatus() {
@@ -381,7 +409,7 @@ public class TestPlaneEntity extends Entity {
 			}
 
 			this.setDeltaMovement(this.getDeltaMovement().add(Mth.sin(-this.getYRot() * ((float)Math.PI / 180F)) * f, 0.0D, Mth.cos(this.getYRot() * ((float)Math.PI / 180F)) * f));
-			this.setControlState(this.inputLeft, this.inputRight, this.inputSpeedUp);
+			this.setControlState(this.inputSpeedUp, this.inputLeft, this.inputRight);
 		}
 	}
 
