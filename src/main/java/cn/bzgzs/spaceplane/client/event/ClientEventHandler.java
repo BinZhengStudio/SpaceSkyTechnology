@@ -1,6 +1,7 @@
 package cn.bzgzs.spaceplane.client.event;
 
-import cn.bzgzs.spaceplane.world.entity.TestPlane2;
+import cn.bzgzs.spaceplane.client.player.KeyboardInputList;
+import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
@@ -12,7 +13,7 @@ public class ClientEventHandler {
 	@SubscribeEvent
 	public static void keyInputEvent(InputEvent.KeyInputEvent event) {
 		if (Minecraft.getInstance().player != null) {
-			if (Minecraft.getInstance().player.getVehicle() instanceof TestPlane2 plane) {
+			if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
 //				plane.setClientInput(0, Minecraft.getInstance().options.keyUp.isDown());
 //				plane.setClientInput(1, Minecraft.getInstance().options.keyLeft.isDown());
 //				plane.setClientInput(2, Minecraft.getInstance().options.keyDown.isDown());
@@ -21,7 +22,7 @@ public class ClientEventHandler {
 //				plane.setClientInput(6, KeyboardInputList.DECLINE.isDown());
 //				plane.setClientInput(8, Minecraft.getInstance().options.keyJump.isDown());
 //				plane.setClientInput(9, KeyboardInputList.ENGINE_ON.isDown());
-				plane.setInput(Minecraft.getInstance().options.keyLeft.isDown(), Minecraft.getInstance().options.keyRight.isDown(), Minecraft.getInstance().options.keyUp.isDown(), Minecraft.getInstance().options.keyDown.isDown());
+				plane.setClientInput(KeyboardInputList.LEFT.isDown(), KeyboardInputList.RIGHT.isDown(), Minecraft.getInstance().options.keyJump.isDown());
 
 //				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(0, Minecraft.getInstance().options.keyUp.isDown()));
 //				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(1, Minecraft.getInstance().options.keyLeft.isDown()));

@@ -380,7 +380,7 @@ public class TestPlaneEntity extends Entity {
    				f += 0.04F;
 			}
 
-			this.setDeltaMovement(this.getDeltaMovement().add(this.getDeltaMovement().add(Mth.sin(-this.getYRot() * ((float)Math.PI / 180F)) * f, 0.0D, Mth.cos(this.getYRot() * ((float)Math.PI / 180F)) * f)));
+			this.setDeltaMovement(this.getDeltaMovement().add(Mth.sin(-this.getYRot() * ((float)Math.PI / 180F)) * f, 0.0D, Mth.cos(this.getYRot() * ((float)Math.PI / 180F)) * f));
 			this.setControlState(this.inputLeft, this.inputRight, this.inputSpeedUp);
 		}
 	}
@@ -390,6 +390,9 @@ public class TestPlaneEntity extends Entity {
 	public void positionRider(Entity passenger) {
 		if (this.hasPassenger(passenger)) {
 			passenger.setPos(this.calculateRiderPosition());
+			passenger.setYRot(passenger.getYRot() + this.deltaYawRotate);
+			passenger.setYHeadRot(passenger.getYHeadRot() + this.deltaYawRotate);
+			this.clampRotation(passenger);
 		}
 	}
 
@@ -415,7 +418,7 @@ public class TestPlaneEntity extends Entity {
 		this.clampRotation(entityToUpdate);
 	}
 
-	public static enum Status {
+	public enum Status {
 		ABOVE_WATER,
 		ON_LAND,
 		IN_AIR,
