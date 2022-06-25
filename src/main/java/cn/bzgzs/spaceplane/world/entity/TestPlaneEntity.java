@@ -1,5 +1,7 @@
 package cn.bzgzs.spaceplane.world.entity;
 
+import cn.bzgzs.spaceplane.network.ClientPlaneEnginePacket;
+import cn.bzgzs.spaceplane.network.NetworkHandler;
 import net.minecraft.BlockUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -26,10 +28,10 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.network.NetworkHooks;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class TestPlaneEntity extends Entity {
+	// 没啥用的数据同步
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> SPEED_UP = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> LEFT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
@@ -44,13 +46,13 @@ public class TestPlaneEntity extends Entity {
 	private double lerpZ;
 	private double lerpYRot;
 	private double lerpXRot;
+	private boolean inputEngineOnActivation;
 	private boolean inputLeft;
 	private boolean inputRight;
 	private boolean inputSpeedUp;
 	private float landFriction;
 	private TestPlaneEntity.Status status;
 	private TestPlaneEntity.Status oldStatus;
-	private double lastYDelta;
 
 	public TestPlaneEntity(EntityType<?> type, Level world) {
 		super(type, world);
@@ -64,10 +66,12 @@ public class TestPlaneEntity extends Entity {
 //		this.zo = z;
 //	}
 
+	@Override
 	protected float getEyeHeight(Pose pose, EntityDimensions size) {
 		return size.height;
 	}
 
+	@Override
 	protected Entity.MovementEmission getMovementEmission() {
 		return Entity.MovementEmission.NONE;
 	}
@@ -80,6 +84,7 @@ public class TestPlaneEntity extends Entity {
 		this.entityData.define(RIGHT, false);
 	}
 
+	@Override
 	public boolean canCollideWith(Entity entity) {
 		return canVehicleCollide(this, entity);
 	}
@@ -88,26 +93,32 @@ public class TestPlaneEntity extends Entity {
 		return (vehicle.canBeCollidedWith() || vehicle.isPushable()) && !entity.isPassengerOfSameVehicle(vehicle);
 	}
 
+	@Override
 	public boolean canBeCollidedWith() {
 		return true;
 	}
 
+	@Override
 	public boolean isPushable() {
 		return false;
 	}
 
+	@Override
 	protected Vec3 getRelativePortalPosition(Direction.Axis pAxis, BlockUtil.FoundRectangle pPortal) {
 		return LivingEntity.resetForwardDirectionOfRelativePortalPosition(super.getRelativePortalPosition(pAxis, pPortal));
 	}
 
+	@Override
 	public double getPassengersRidingOffset() {
 		return -0.1D;
 	}
 
-	public boolean hurt(DamageSource pSource, float pAmount) {
+	@Override
+	public boolean hurt(DamageSource source, float amount) {
 		return false;
 	}
 
+	@Override
 	public void push(Entity entity) {
 		if (entity instanceof TestPlaneEntity) {
 			if (entity.getBoundingBox().minY < this.getBoundingBox().maxY) {
@@ -118,23 +129,27 @@ public class TestPlaneEntity extends Entity {
 		}
 	}
 
+	@Override
 	public boolean isPickable() {
 		return !this.isRemoved();
 	}
 
-	public void lerpTo(double pX, double pY, double pZ, float pYaw, float pPitch, int pPosRotationIncrements, boolean pTeleport) {
-		this.lerpX = pX;
-		this.lerpY = pY;
-		this.lerpZ = pZ;
-		this.lerpYRot = pYaw;
-		this.lerpXRot = pPitch;
+	@Override
+	public void lerpTo(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
+		this.lerpX = x;
+		this.lerpY = y;
+		this.lerpZ = z;
+		this.lerpYRot = yaw;
+		this.lerpXRot = pitch;
 		this.lerpSteps = 10;
 	}
 
+	@Override
 	public Direction getMotionDirection() {
 		return this.getDirection().getClockWise();
 	}
 
+	@Override
 	public void tick() {
 		this.oldStatus = this.status;
 		this.status = this.getStatus();
@@ -151,9 +166,11 @@ public class TestPlaneEntity extends Entity {
 		super.tick();
 		this.tickLerp();
 		if (this.isControlledByLocalInstance()) {
-			this.calculateLift(); // TODO 升力
+			this.lift(); // 升力
+			this.resistance(); // 阻力
 			if (this.level.isClientSide) {
 				this.controlPlane();
+				// 经测试，不发包不影响游戏体验
 //				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(this.getSpeedUp(), this.getLeft(), this.getRight()));
 			}
 
@@ -197,6 +214,28 @@ public class TestPlaneEntity extends Entity {
 		this.setSpeedUp(speedUp);
 		this.setLeft(left);
 		this.setRight(right);
+	}
+
+	public void setInputEngineOnActivation(boolean activation) {
+		if (!activation) this.changeEngineState();
+		this.inputEngineOnActivation = activation;
+	}
+
+	public void changeEngineState() {
+		if (this.inputEngineOnActivation) {
+			this.entityData.set(ENGINE_ON, !this.entityData.get(ENGINE_ON));
+			if (this.level.isClientSide) {
+				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneEnginePacket(this.entityData.get(ENGINE_ON)));
+			}
+		}
+	}
+
+	public void setEngineState(boolean state) {
+		this.entityData.set(ENGINE_ON, state);
+	}
+
+	public boolean getEngineState() {
+		return this.entityData.get(ENGINE_ON);
 	}
 
 	public boolean getSpeedUp() {
@@ -364,32 +403,32 @@ public class TestPlaneEntity extends Entity {
 		return flag;
 	}
 
-	private void calculateLift() { // TODO 计算升力的部分
-		double gravity = this.isNoGravity() ? 0.0D : -0.04D;
+	private void resistance() { // TODO 计算阻力
 		this.invFriction = 0.05F; // 运动和旋转阻力，数值越小代表阻力越大
-		if (this.oldStatus == Status.ON_LAND && this.status != Status.ON_LAND) { // 从空中降落地面
+		if (this.status == Status.ABOVE_WATER) {
+			this.invFriction = 0.7F;
+		} else if (this.status == Status.OTHER) {
+			this.invFriction = 0.0F;
+		} else if (this.status == Status.IN_AIR) {
+			this.invFriction = 0.9F;
+		} else if (this.status == Status.ON_LAND) {
+			this.invFriction = this.landFriction;
+		}
+
+		this.setDeltaMovement(this.getDeltaMovement().multiply(this.invFriction, 1.0D, this.invFriction));
+		this.deltaYawRotate *= this.invFriction;
+	}
+
+	private void lift() { // 升力
+		float gravity = this.isNoGravity() ? 0.0F : -0.04F;
+		double lift = 0.0D;
+		if (this.oldStatus == Status.IN_AIR && this.status == Status.ON_LAND) { // 从空中降落地面
 //			this.setPos(this.getX(), (double)(this.getWaterLevelAbove() - this.getBbHeight()) + 0.101D, this.getZ()); TODO
 			this.setDeltaMovement(this.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D));
-			this.lastYDelta = 0.0D;
 			this.status = Status.ON_LAND;
-		} else {
-			if (this.status == Status.ABOVE_WATER) {
-				this.invFriction = 0.7F;
-			} else if (this.status == Status.OTHER) {
-				this.invFriction = 0.0F;
-			} else if (this.status == Status.IN_AIR) {
-				this.invFriction = 0.9F;
-			} else if (this.status == Status.ON_LAND) {
-				this.invFriction = this.landFriction;
-				if (this.getControllingPassenger() instanceof Player) {
-					this.landFriction /= 2.0F;
-				}
-			}
-
-			Vec3 motion = this.getDeltaMovement();
-			this.setDeltaMovement(motion.x * this.invFriction, motion.y + gravity, motion.z * this.invFriction);
-			this.deltaYawRotate *= this.invFriction;
 		}
+
+		this.setDeltaMovement(this.getDeltaMovement().add(0.0D, gravity, 0.0D));
 	}
 
 	private void controlPlane() {
@@ -405,10 +444,10 @@ public class TestPlaneEntity extends Entity {
 
 			this.setYRot(this.getYRot() + this.deltaYawRotate);
 			if (this.inputSpeedUp) {
-   				f += 0.04F;
+				f += 0.04F;
 			}
 
-			this.setDeltaMovement(this.getDeltaMovement().add(Mth.sin(-this.getYRot() * ((float)Math.PI / 180F)) * f, 0.0D, Mth.cos(this.getYRot() * ((float)Math.PI / 180F)) * f));
+			this.setDeltaMovement(this.getDeltaMovement().add(Mth.sin(-this.getYRot() * ((float) Math.PI / 180F)) * f, 0.0D, Mth.cos(this.getYRot() * ((float) Math.PI / 180F)) * f));
 			this.setControlState(this.inputSpeedUp, this.inputLeft, this.inputRight);
 		}
 	}
@@ -442,27 +481,29 @@ public class TestPlaneEntity extends Entity {
 		entityToUpdate.setYHeadRot(entityToUpdate.getYRot());
 	}
 
+	@Override
 	public void onPassengerTurned(Entity entityToUpdate) {
 		this.clampRotation(entityToUpdate);
 	}
 
 	public enum Status {
-		ABOVE_WATER,
+		ABOVE_WATER, // 以后写水路两栖飞机可能用到
 		ON_LAND,
 		IN_AIR,
 		OTHER
 	}
 
 	@Override
-	protected void readAdditionalSaveData(CompoundTag pCompound) {
-
+	protected void readAdditionalSaveData(CompoundTag tag) {
+		this.entityData.set(ENGINE_ON, tag.getBoolean("EngineState"));
 	}
 
 	@Override
-	protected void addAdditionalSaveData(CompoundTag pCompound) {
-
+	protected void addAdditionalSaveData(CompoundTag tag) {
+		tag.putBoolean("EngineState", this.entityData.get(ENGINE_ON));
 	}
 
+	@Override
 	public InteractionResult interact(Player pPlayer, InteractionHand pHand) {
 		if (pPlayer.isSecondaryUseActive()) {
 			return InteractionResult.PASS;
@@ -477,11 +518,12 @@ public class TestPlaneEntity extends Entity {
 		}
 	}
 
+	@Override
 	protected boolean canAddPassenger(Entity passenger) {
 		return this.getPassengers().isEmpty() && passenger instanceof Player;
 	}
 
-	@Nullable
+	@Override
 	public Entity getControllingPassenger() {
 		return this.getFirstPassenger();
 	}

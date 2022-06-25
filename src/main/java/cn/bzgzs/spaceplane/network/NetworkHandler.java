@@ -14,6 +14,7 @@ public class NetworkHandler {
 		INSTANCE.messageBuilder(ClientSteamEngineWaterIOPacket.class, getId()).encoder(ClientSteamEngineWaterIOPacket::encode).decoder(ClientSteamEngineWaterIOPacket::new).consumer(ClientSteamEngineWaterIOPacket::consumer).add();
 		INSTANCE.messageBuilder(ClientSteamEngineSetSpeedPacket.class, getId()).encoder(ClientSteamEngineSetSpeedPacket::encode).decoder(ClientSteamEngineSetSpeedPacket::new).consumer(ClientSteamEngineSetSpeedPacket::consumer).add();
 		INSTANCE.messageBuilder(ClientPlaneControlPacket.class, getId()).encoder(ClientPlaneControlPacket::encode).decoder(ClientPlaneControlPacket::new).consumer(ClientPlaneControlPacket::consumer).add();
+		INSTANCE.messageBuilder(ClientPlaneEnginePacket.class, getId()).encoder(ClientPlaneEnginePacket::encode).decoder(ClientPlaneEnginePacket::new).consumer(ClientPlaneEnginePacket::consumer).add();
 	}
 
 	public static int getId() {
