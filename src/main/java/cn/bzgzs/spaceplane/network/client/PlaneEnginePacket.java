@@ -1,5 +1,6 @@
-package cn.bzgzs.spaceplane.network;
+package cn.bzgzs.spaceplane.network.client;
 
+import cn.bzgzs.spaceplane.network.CustomPacket;
 import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -7,21 +8,23 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class ClientPlaneEnginePacket {
+public class PlaneEnginePacket extends CustomPacket {
 	private final boolean engineOn;
 
-	public ClientPlaneEnginePacket(FriendlyByteBuf buf) {
+	public PlaneEnginePacket(FriendlyByteBuf buf) {
 		this.engineOn = buf.readBoolean();
 	}
 
-	public ClientPlaneEnginePacket(boolean engineOn) {
+	public PlaneEnginePacket(boolean engineOn) {
 		this.engineOn = engineOn;
 	}
 
+	@Override
 	public void encode(FriendlyByteBuf buf) {
 		buf.writeBoolean(engineOn);
 	}
 
+	@Override
 	public void consumer(Supplier<NetworkEvent.Context> context) {
 		context.get().enqueueWork(() -> {
 			ServerPlayer sender = context.get().getSender();

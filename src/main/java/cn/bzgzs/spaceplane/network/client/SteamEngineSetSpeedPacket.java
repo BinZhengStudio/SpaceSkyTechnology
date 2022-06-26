@@ -1,6 +1,7 @@
-package cn.bzgzs.spaceplane.network;
+package cn.bzgzs.spaceplane.network.client;
 
 import cn.bzgzs.spaceplane.SpacePlane;
+import cn.bzgzs.spaceplane.network.CustomPacket;
 import cn.bzgzs.spaceplane.world.level.block.entity.SteamEngineBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -10,25 +11,27 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class ClientSteamEngineSetSpeedPacket {
+public class SteamEngineSetSpeedPacket extends CustomPacket {
 	private final int speed;
 	private final BlockPos pos;
 
-	public ClientSteamEngineSetSpeedPacket(FriendlyByteBuf buf) {
+	public SteamEngineSetSpeedPacket(FriendlyByteBuf buf) {
 		this.speed = buf.readInt();
 		this.pos = buf.readBlockPos();
 	}
 
-	public ClientSteamEngineSetSpeedPacket(int speed, BlockPos pos) {
+	public SteamEngineSetSpeedPacket(int speed, BlockPos pos) {
 		this.speed = speed;
 		this.pos = pos;
 	}
 
+	@Override
 	public void encode(FriendlyByteBuf buf) {
 		buf.writeInt(speed);
 		buf.writeBlockPos(pos);
 	}
 
+	@Override
 	public void consumer(Supplier<NetworkEvent.Context> context) {
 		context.get().enqueueWork(() -> {
 			ServerPlayer sender = context.get().getSender();

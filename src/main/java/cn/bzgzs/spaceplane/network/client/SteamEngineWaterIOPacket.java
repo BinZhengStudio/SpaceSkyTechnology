@@ -1,6 +1,7 @@
-package cn.bzgzs.spaceplane.network;
+package cn.bzgzs.spaceplane.network.client;
 
 import cn.bzgzs.spaceplane.SpacePlane;
+import cn.bzgzs.spaceplane.network.CustomPacket;
 import cn.bzgzs.spaceplane.world.level.block.entity.SteamEngineBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -10,29 +11,31 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class ClientSteamEngineWaterIOPacket {
+public class SteamEngineWaterIOPacket extends CustomPacket {
 	private final boolean isPourIn;
 	private final int amount;
 	private final BlockPos pos;
 
-	public ClientSteamEngineWaterIOPacket(FriendlyByteBuf buf) {
+	public SteamEngineWaterIOPacket(FriendlyByteBuf buf) {
 		this.isPourIn = buf.readBoolean();
 		this.amount = buf.readInt();
 		this.pos = buf.readBlockPos();
 	}
 
-	public ClientSteamEngineWaterIOPacket(boolean isPourIn, int amount, BlockPos pos) {
+	public SteamEngineWaterIOPacket(boolean isPourIn, int amount, BlockPos pos) {
 		this.isPourIn = isPourIn;
 		this.amount = amount;
 		this.pos = pos;
 	}
 
+	@Override
 	public void encode(FriendlyByteBuf buf) {
 		buf.writeBoolean(isPourIn);
 		buf.writeInt(amount);
 		buf.writeBlockPos(pos);
 	}
 
+	@Override
 	public void consumer(Supplier<NetworkEvent.Context> context) {
 		context.get().enqueueWork(() -> {
 			ServerPlayer sender = context.get().getSender();

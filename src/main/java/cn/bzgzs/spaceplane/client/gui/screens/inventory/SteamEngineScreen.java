@@ -1,9 +1,9 @@
 package cn.bzgzs.spaceplane.client.gui.screens.inventory;
 
 import cn.bzgzs.spaceplane.SpacePlane;
-import cn.bzgzs.spaceplane.network.ClientSteamEngineSetSpeedPacket;
-import cn.bzgzs.spaceplane.network.ClientSteamEngineWaterIOPacket;
 import cn.bzgzs.spaceplane.network.NetworkHandler;
+import cn.bzgzs.spaceplane.network.client.SteamEngineSetSpeedPacket;
+import cn.bzgzs.spaceplane.network.client.SteamEngineWaterIOPacket;
 import cn.bzgzs.spaceplane.world.inventory.SteamEngineMenu;
 import cn.bzgzs.spaceplane.world.level.block.entity.SteamEngineBlockEntity;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -40,9 +40,9 @@ public class SteamEngineScreen extends AbstractContainerScreen<SteamEngineMenu> 
 			int y = this.menu.getData().get(7);
 			int z = this.menu.getData().get(8);
 			if (stack.getItem() == Items.WATER_BUCKET && this.menu.getData().get(4) <= SteamEngineBlockEntity.MAX_WATER - 1000) {
-				NetworkHandler.INSTANCE.sendToServer(new ClientSteamEngineWaterIOPacket(true, 1000, new BlockPos(x, y, z)));
+				NetworkHandler.INSTANCE.sendToServer(new SteamEngineWaterIOPacket(true, 1000, new BlockPos(x, y, z)));
 			} else if (stack.getItem() == Items.BUCKET && this.menu.getData().get(5) >= 1000) {
-				NetworkHandler.INSTANCE.sendToServer(new ClientSteamEngineWaterIOPacket(false, 1000, new BlockPos(x, y, z)));
+				NetworkHandler.INSTANCE.sendToServer(new SteamEngineWaterIOPacket(false, 1000, new BlockPos(x, y, z)));
 			}
 		}));
 		int buttonX = this.leftPos + this.font.width(this.title) + 18 + this.font.width(setSpeed);
@@ -51,14 +51,14 @@ public class SteamEngineScreen extends AbstractContainerScreen<SteamEngineMenu> 
 			int y = this.menu.getData().get(7);
 			int z = this.menu.getData().get(8);
 			if (this.menu.getData().get(1) < SteamEngineBlockEntity.MAX_SPEED)
-				NetworkHandler.INSTANCE.sendToServer(new ClientSteamEngineSetSpeedPacket(this.menu.getData().get(1) + 1, new BlockPos(x, y, z)));
+				NetworkHandler.INSTANCE.sendToServer(new SteamEngineSetSpeedPacket(this.menu.getData().get(1) + 1, new BlockPos(x, y, z)));
 		}));
 		this.addRenderableWidget(new ImageButton(buttonX, this.topPos + 11, 9, 6, 202, 0, TEXTURE, (buttonWidget) -> {
 			int x = this.menu.getData().get(6);
 			int y = this.menu.getData().get(7);
 			int z = this.menu.getData().get(8);
 			if (this.menu.getData().get(1) > 1)
-				NetworkHandler.INSTANCE.sendToServer(new ClientSteamEngineSetSpeedPacket(this.menu.getData().get(1) - 1, new BlockPos(x, y, z)));
+				NetworkHandler.INSTANCE.sendToServer(new SteamEngineSetSpeedPacket(this.menu.getData().get(1) - 1, new BlockPos(x, y, z)));
 		}));
 	}
 

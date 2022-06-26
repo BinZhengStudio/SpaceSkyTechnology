@@ -17,15 +17,21 @@ import java.util.List;
 public class KeyboardInputList {
 	private static final List<KeyMapping> LIST = new ArrayList<>();
 	private static final String PLANE_CONTROL = "plane_control";
-	public static final KeyMapping ENGINE_ON = register("engine_on", KeyConflictContext.IN_GAME, KeyModifier.NONE, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, PLANE_CONTROL);
-	public static final KeyMapping CLIMB_UP = register("climb_up", KeyConflictContext.IN_GAME, KeyModifier.NONE, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UP, PLANE_CONTROL);
-	public static final KeyMapping DECLINE = register("decline", KeyConflictContext.IN_GAME, KeyModifier.NONE, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_DOWN, PLANE_CONTROL);
-	public static final KeyMapping LEFT = register("left", KeyConflictContext.IN_GAME, KeyModifier.NONE, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT, PLANE_CONTROL);
-	public static final KeyMapping RIGHT = register("right", KeyConflictContext.IN_GAME, KeyModifier.NONE, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT, PLANE_CONTROL);
+	public static final KeyMapping ENGINE_ON = registerInGame("engine_on", GLFW.GLFW_KEY_Z, PLANE_CONTROL);
+	public static final KeyMapping LANDING_GEAR = registerInGame("landing_gear", GLFW.GLFW_KEY_X, PLANE_CONTROL);
+	public static final KeyMapping CLIMB_UP = registerInGame("climb_up", GLFW.GLFW_KEY_UP, PLANE_CONTROL);
+	public static final KeyMapping DECLINE = registerInGame("decline", GLFW.GLFW_KEY_DOWN, PLANE_CONTROL);
+	public static final KeyMapping LEFT = registerInGame("left", GLFW.GLFW_KEY_LEFT, PLANE_CONTROL);
+	public static final KeyMapping RIGHT = registerInGame("right", GLFW.GLFW_KEY_RIGHT, PLANE_CONTROL);
+
 	public static void register() {
 		for (KeyMapping keyMapping : LIST) {
 			ClientRegistry.registerKeyBinding(keyMapping);
 		}
+	}
+
+	private static KeyMapping registerInGame(String name, final int keyCode, String category) {
+		return register(name, KeyConflictContext.IN_GAME, KeyModifier.NONE, InputConstants.Type.KEYSYM, keyCode, category);
 	}
 
 	private static KeyMapping register(String name, IKeyConflictContext context, KeyModifier modifier, InputConstants.Type type, final int keyCode, String category) {

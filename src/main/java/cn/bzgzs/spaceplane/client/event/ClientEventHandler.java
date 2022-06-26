@@ -17,7 +17,8 @@ public class ClientEventHandler {
 		if (Minecraft.getInstance().player != null) {
 			if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
 				plane.setClientInput(KeyboardInputList.LEFT.isDown(), KeyboardInputList.RIGHT.isDown(), Minecraft.getInstance().options.keyJump.isDown());
-				plane.setInputEngineOnActivation(KeyboardInputList.ENGINE_ON.isDown());
+				plane.setInputEngineOnActivation(KeyboardInputList.ENGINE_ON.isDown()); // TODO 需要添加状态检测
+				plane.setInputLandingGearActivation(KeyboardInputList.LANDING_GEAR.isDown());
 			}
 		}
 	}
@@ -25,9 +26,9 @@ public class ClientEventHandler {
 	@SubscribeEvent
 	public static void renderGameOverlayEvent(RenderGameOverlayEvent event) {
 		if (Minecraft.getInstance().player != null) {
-			if (event.getType() == RenderGameOverlayEvent.ElementType.ALL) { // TODO 需要添加状态检测
+			if (event.getType() == RenderGameOverlayEvent.ElementType.ALL) {
 				if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
-					new PlaneGui(event.getMatrixStack(), plane.getEngineState()).render();
+					new PlaneGui(event.getMatrixStack(), plane).render();
 				}
 			}
 		}

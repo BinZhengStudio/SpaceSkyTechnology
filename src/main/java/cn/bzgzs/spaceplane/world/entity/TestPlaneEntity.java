@@ -1,7 +1,8 @@
 package cn.bzgzs.spaceplane.world.entity;
 
-import cn.bzgzs.spaceplane.network.ClientPlaneEnginePacket;
 import cn.bzgzs.spaceplane.network.NetworkHandler;
+import cn.bzgzs.spaceplane.network.client.PlaneEnginePacket;
+import cn.bzgzs.spaceplane.network.client.PlaneLandingGearPacket;
 import net.minecraft.BlockUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -36,6 +37,8 @@ public class TestPlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> SPEED_UP = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> LEFT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> RIGHT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> LANDING_GEAR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	public static final int LANDING_GEAR_HEIGHT = 2;
 	private float invFriction;
 	private float outOfControlTicks;
@@ -47,6 +50,7 @@ public class TestPlaneEntity extends Entity {
 	private double lerpYRot;
 	private double lerpXRot;
 	private boolean inputEngineOnActivation;
+	private boolean inputLandingGearActivation;
 	private boolean inputLeft;
 	private boolean inputRight;
 	private boolean inputSpeedUp;
@@ -82,6 +86,8 @@ public class TestPlaneEntity extends Entity {
 		this.entityData.define(SPEED_UP, false);
 		this.entityData.define(LEFT, false);
 		this.entityData.define(RIGHT, false);
+		this.entityData.define(LANDING_GEAR, false);
+		this.entityData.define(FUEL, 0); // 燃油量，单位mB
 	}
 
 	@Override
@@ -223,19 +229,49 @@ public class TestPlaneEntity extends Entity {
 
 	public void changeEngineState() {
 		if (this.inputEngineOnActivation) {
-			this.entityData.set(ENGINE_ON, !this.entityData.get(ENGINE_ON));
+			if (this.entityData.get(ENGINE_ON)) {
+				if (this.entityData.get(LANDING_GEAR) && this.status == Status.ON_LAND) {
+					this.entityData.set(ENGINE_ON, false);
+				}
+			} else {
+				if (this.entityData.get(FUEL) > 0) {
+					this.entityData.set(ENGINE_ON, true);
+				}
+			}
 			if (this.level.isClientSide) {
-				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneEnginePacket(this.entityData.get(ENGINE_ON)));
+				NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePacket(this.entityData.get(ENGINE_ON)));
 			}
 		}
+	}
+
+	public boolean getEngineState() {
+		return this.entityData.get(ENGINE_ON);
 	}
 
 	public void setEngineState(boolean state) {
 		this.entityData.set(ENGINE_ON, state);
 	}
 
-	public boolean getEngineState() {
-		return this.entityData.get(ENGINE_ON);
+	public void setInputLandingGearActivation(boolean activation) {
+		if (!activation) this.changeLandingGear();
+		this.inputLandingGearActivation = activation;
+	}
+
+	public void changeLandingGear() {
+		if (this.inputLandingGearActivation) {
+			this.entityData.set(LANDING_GEAR, !this.entityData.get(LANDING_GEAR));
+			if (this.level.isClientSide) {
+				NetworkHandler.INSTANCE.sendToServer(new PlaneLandingGearPacket(this.entityData.get(LANDING_GEAR)));
+			}
+		}
+	}
+
+	public boolean getLandingGear() {
+		return this.entityData.get(LANDING_GEAR);
+	}
+
+	public void setLandingGear(boolean state) {
+		this.entityData.set(LANDING_GEAR, state);
 	}
 
 	public boolean getSpeedUp() {
@@ -496,11 +532,13 @@ public class TestPlaneEntity extends Entity {
 	@Override
 	protected void readAdditionalSaveData(CompoundTag tag) {
 		this.entityData.set(ENGINE_ON, tag.getBoolean("EngineState"));
+		this.entityData.set(LANDING_GEAR, tag.getBoolean("LandingGear"));
 	}
 
 	@Override
 	protected void addAdditionalSaveData(CompoundTag tag) {
 		tag.putBoolean("EngineState", this.entityData.get(ENGINE_ON));
+		tag.putBoolean("LandingGear", this.entityData.get(LANDING_GEAR));
 	}
 
 	@Override
