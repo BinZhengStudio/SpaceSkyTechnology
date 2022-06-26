@@ -86,7 +86,7 @@ public class TestPlaneEntity extends Entity {
 		this.entityData.define(SPEED_UP, false);
 		this.entityData.define(LEFT, false);
 		this.entityData.define(RIGHT, false);
-		this.entityData.define(LANDING_GEAR, false);
+		this.entityData.define(LANDING_GEAR, true);
 		this.entityData.define(FUEL, 0); // 燃油量，单位mB
 	}
 
@@ -234,9 +234,9 @@ public class TestPlaneEntity extends Entity {
 					this.entityData.set(ENGINE_ON, false);
 				}
 			} else {
-				if (this.entityData.get(FUEL) > 0) {
-					this.entityData.set(ENGINE_ON, true);
-				}
+//				if (this.entityData.get(FUEL) > 0) {
+				this.entityData.set(ENGINE_ON, true);
+//				}
 			}
 			if (this.level.isClientSide) {
 				NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePacket(this.entityData.get(ENGINE_ON)));
@@ -447,8 +447,13 @@ public class TestPlaneEntity extends Entity {
 			this.invFriction = 0.0F;
 		} else if (this.status == Status.IN_AIR) {
 			this.invFriction = 0.9F;
-		} else if (this.status == Status.ON_LAND) {
-			this.invFriction = this.landFriction;
+		} else if (this.status == Status.ON_LAND) { // TODO 需要添加擦地阻力
+			if (this.entityData.get(ENGINE_ON) && this.entityData.get(LANDING_GEAR)) {
+				this.invFriction = 0.99F;
+			} else {
+				this.invFriction = 0.9F;
+			}
+			this.deltaYawRotate = 0.0F;
 		}
 
 		this.setDeltaMovement(this.getDeltaMovement().multiply(this.invFriction, 1.0D, this.invFriction));
@@ -461,7 +466,6 @@ public class TestPlaneEntity extends Entity {
 		if (this.oldStatus == Status.IN_AIR && this.status == Status.ON_LAND) { // 从空中降落地面
 //			this.setPos(this.getX(), (double)(this.getWaterLevelAbove() - this.getBbHeight()) + 0.101D, this.getZ()); TODO
 			this.setDeltaMovement(this.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D));
-			this.status = Status.ON_LAND;
 		}
 
 		this.setDeltaMovement(this.getDeltaMovement().add(0.0D, gravity, 0.0D));
@@ -470,21 +474,36 @@ public class TestPlaneEntity extends Entity {
 	private void controlPlane() {
 		if (this.isVehicle()) {
 			float f = 0.0F;
-			if (this.inputLeft) {
-				--this.deltaYawRotate;
-			}
+			if (this.status == Status.ON_LAND && !this.entityData.get(ENGINE_ON) && this.entityData.get(LANDING_GEAR)) {
+				if (this.inputLeft) {
+					--this.deltaYawRotate;
+				}
 
-			if (this.inputRight) {
-				++this.deltaYawRotate;
-			}
+				if (this.inputRight) {
+					++this.deltaYawRotate;
+				}
+			} else if (this.status == Status.IN_AIR) { // TODO 根据速度确定加速度
+				if (this.inputLeft) {
+					--this.deltaYawRotate;
+				}
 
+				if (this.inputRight) {
+					++this.deltaYawRotate;
+				}
+			}
 			this.setYRot(this.getYRot() + this.deltaYawRotate);
+
 			if (this.inputSpeedUp) {
-				f += 0.04F;
+				if (this.entityData.get(ENGINE_ON)) {
+					f += 0.1F;
+				} else if (this.status == Status.ON_LAND && this.entityData.get(LANDING_GEAR)) {
+					f += 0.04F;
+				}
 			}
 
-			this.setDeltaMovement(this.getDeltaMovement().add(Mth.sin(-this.getYRot() * ((float) Math.PI / 180F)) * f, 0.0D, Mth.cos(this.getYRot() * ((float) Math.PI / 180F)) * f));
-			this.setControlState(this.inputSpeedUp, this.inputLeft, this.inputRight);
+//			this.setDeltaMovement(this.getDeltaMovement().add(Mth.sin(-this.getYRot() * ((float) Math.PI / 180F)) * f, 0.0D, Mth.cos(this.getYRot() * ((float) Math.PI / 180F)) * f));
+			this.setDeltaMovement(this.getDeltaMovement().add(Math.sin(Math.toRadians(-this.getYRot())) * f, 0.0D, Math.cos(Math.toRadians(this.getYRot())) * f));
+//			this.setControlState(this.inputSpeedUp, this.inputLeft, this.inputRight);
 		}
 	}
 
