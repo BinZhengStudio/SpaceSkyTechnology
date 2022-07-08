@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 
 public enum ModItemTiers implements Tier {
 
-    RHENIUM(5,3000,9.0F,10.0F,17,() -> {return Ingredient.of(ItemList.RHENIUM_INGOT.get());}),
+    RHENIUM(5,3000,13.0F,10.0F,17,() -> {return Ingredient.of(ItemList.RHENIUM_INGOT.get());}),
     NICKEL(2,1033,7.0F,8.0F,10,() -> {return Ingredient.of(ItemList.NICKEL_INGOT.get());});
 
     private final int uses;
