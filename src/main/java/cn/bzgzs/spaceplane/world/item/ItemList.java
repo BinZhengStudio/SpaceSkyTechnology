@@ -1,6 +1,7 @@
 package cn.bzgzs.spaceplane.world.item;
 
 import cn.bzgzs.spaceplane.SpacePlane;
+import cn.bzgzs.spaceplane.world.item.Tool.NickelPickaxe;
 import cn.bzgzs.spaceplane.world.item.Tool.RheniumPickaxe;
 import cn.bzgzs.spaceplane.world.item.sword.NickelSword;
 import cn.bzgzs.spaceplane.world.item.sword.RheniumSword;
@@ -19,6 +20,7 @@ public class ItemList {
 	public static final RegistryObject<Item> PHENIUM_SWORD = ITEMS.register("rhenium_sword", RheniumSword::new);
 	public static final RegistryObject<Item> NICKEL_SWORD = ITEMS.register("nickel_sword", NickelSword::new);
 	public static final RegistryObject<Item> RHENIUM_PICKAXE = ITEMS.register("rhenium_pickaxe", RheniumPickaxe::new);
+	public static final RegistryObject<Item> NICKEL_PICKAXE = ITEMS.register("nickel_pickaxe", NickelPickaxe::new);
 	// vvvbbbcz:方块的物品形态注册
 	public static final RegistryObject<BlockItem> RHENIUM_ORE = ITEMS.register("rhenium_ore", () -> new BlockItem(BlockList.RHENIUM_ORE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<BlockItem> DEEPSLATE_RHENIUM_ORE = ITEMS.register("deepslate_rhenium_ore", () -> new BlockItem(BlockList.DEEPSLATE_RHENIUM_ORE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
