@@ -159,7 +159,7 @@ public class TestPlane2 extends Entity {
 	public void tick() {
 		this.oldStatus = this.status;
 		this.status = this.getStatus();
-		if (this.status != TestPlaneEntity.Status.OTHER) {
+		if (this.status != TestPlaneEntity.Status.UNDER_WATER) {
 			this.outOfControlTicks = 0.0F;
 		} else {
 			++this.outOfControlTicks;
@@ -230,7 +230,7 @@ public class TestPlane2 extends Entity {
 	public void changeEngineState() {
 		if (this.inputEngineOnActivation) {
 			if (this.entityData.get(ENGINE_ON)) {
-				if (this.entityData.get(LANDING_GEAR) && this.status == TestPlaneEntity.Status.STAND_ON_LAND) {
+				if (this.entityData.get(LANDING_GEAR) && this.status == TestPlaneEntity.Status.STAND_ON_GROUND) {
 					this.entityData.set(ENGINE_ON, false);
 				}
 			} else {
@@ -300,14 +300,14 @@ public class TestPlane2 extends Entity {
 
 	private TestPlaneEntity.Status getStatus() {
 		if (this.checkUnderWater()) {
-			return TestPlaneEntity.Status.OTHER;
+			return TestPlaneEntity.Status.UNDER_WATER;
 		} else if (this.isAboveWater()) {
 			return TestPlaneEntity.Status.ABOVE_WATER;
 		} else {
 			float f = this.getGroundFriction();
 			if (f > 0.0F) {
 				this.landFriction = f;
-				return TestPlaneEntity.Status.STAND_ON_LAND;
+				return TestPlaneEntity.Status.STAND_ON_GROUND;
 			} else {
 				return TestPlaneEntity.Status.IN_AIR;
 			}
@@ -443,11 +443,11 @@ public class TestPlane2 extends Entity {
 		this.invFriction = 0.05F; // 运动和旋转阻力，数值越小代表阻力越大
 		if (this.status == TestPlaneEntity.Status.ABOVE_WATER) {
 			this.invFriction = 0.7F;
-		} else if (this.status == TestPlaneEntity.Status.OTHER) {
+		} else if (this.status == TestPlaneEntity.Status.UNDER_WATER) {
 			this.invFriction = 0.0F;
 		} else if (this.status == TestPlaneEntity.Status.IN_AIR) {
 			this.invFriction = 0.9F;
-		} else if (this.status == TestPlaneEntity.Status.STAND_ON_LAND) { // TODO 需要添加擦地阻力
+		} else if (this.status == TestPlaneEntity.Status.STAND_ON_GROUND) { // TODO 需要添加擦地阻力
 			if (this.entityData.get(ENGINE_ON) && this.entityData.get(LANDING_GEAR)) {
 				this.invFriction = 0.99F;
 			} else {
@@ -463,7 +463,7 @@ public class TestPlane2 extends Entity {
 	private void lift() { // 升力
 		float gravity = this.isNoGravity() ? 0.0F : -0.04F;
 		double lift = 0.0D;
-		if (this.oldStatus == TestPlaneEntity.Status.IN_AIR && this.status == TestPlaneEntity.Status.STAND_ON_LAND) { // 从空中降落地面
+		if (this.oldStatus == TestPlaneEntity.Status.IN_AIR && this.status == TestPlaneEntity.Status.STAND_ON_GROUND) { // 从空中降落地面
 //			this.setPos(this.getX(), (double)(this.getWaterLevelAbove() - this.getBbHeight()) + 0.101D, this.getZ()); TODO
 			this.setDeltaMovement(this.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D));
 		}
@@ -474,7 +474,7 @@ public class TestPlane2 extends Entity {
 	private void controlPlane() {
 		if (this.isVehicle()) {
 			float f = 0.0F;
-			if (this.status == TestPlaneEntity.Status.STAND_ON_LAND && !this.entityData.get(ENGINE_ON) && this.entityData.get(LANDING_GEAR)) {
+			if (this.status == TestPlaneEntity.Status.STAND_ON_GROUND && !this.entityData.get(ENGINE_ON) && this.entityData.get(LANDING_GEAR)) {
 				if (this.inputLeft) {
 					--this.deltaYawRotate;
 				}
@@ -496,7 +496,7 @@ public class TestPlane2 extends Entity {
 			if (this.inputSpeedUp) {
 				if (this.entityData.get(ENGINE_ON)) {
 					f += 0.1F;
-				} else if (this.status == TestPlaneEntity.Status.STAND_ON_LAND && this.entityData.get(LANDING_GEAR)) {
+				} else if (this.status == TestPlaneEntity.Status.STAND_ON_GROUND && this.entityData.get(LANDING_GEAR)) {
 					f += 0.04F;
 				}
 			}
