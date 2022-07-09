@@ -16,9 +16,12 @@ public class ClientEventHandler {
 	public static void keyInputEvent(InputEvent.KeyInputEvent event) {
 		if (Minecraft.getInstance().player != null) {
 			if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
-				plane.setClientInput(KeyboardInputList.LEFT.isDown(), KeyboardInputList.RIGHT.isDown(), Minecraft.getInstance().options.keyJump.isDown());
-				plane.setInputEngineOnActivation(KeyboardInputList.ENGINE_ON.isDown()); // TODO 需要添加状态检测
+				plane.setClientInput(KeyboardInputList.PLANE_LEFT.isDown(), KeyboardInputList.PLANE_RIGHT.isDown(), KeyboardInputList.PLANE_SPEED_UP.isDown());
+				plane.setInputEngineOnActivation(KeyboardInputList.ENGINE_ON.isDown());
 				plane.setInputLandingGearActivation(KeyboardInputList.LANDING_GEAR.isDown());
+				if (plane.getTractor() && KeyboardInputList.SEPARATE_TRACTOR.isDown()) {
+					plane.setTractor(false);
+				}
 			}
 		}
 	}

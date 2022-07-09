@@ -3,6 +3,8 @@ package cn.bzgzs.spaceplane.world.entity;
 import cn.bzgzs.spaceplane.network.NetworkHandler;
 import cn.bzgzs.spaceplane.network.client.PlaneEnginePacket;
 import cn.bzgzs.spaceplane.network.client.PlaneLandingGearPacket;
+import cn.bzgzs.spaceplane.network.client.PlaneTractorPacket;
+import cn.bzgzs.spaceplane.world.item.ItemList;
 import net.minecraft.BlockUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -18,6 +20,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.WaterlilyBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -32,23 +35,23 @@ import net.minecraftforge.network.NetworkHooks;
 import java.util.List;
 
 public class TestPlaneEntity extends Entity {
-	// 没啥用的数据同步
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> SPEED_UP = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> LEFT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> RIGHT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> LANDING_GEAR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> TRACTOR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	public static final int LANDING_GEAR_HEIGHT = 2;
-	private float invFriction;
 	private float outOfControlTicks;
-	private float deltaYawRotate;
+	private float zRot;
+	private float deltaYaw;
 	private int lerpSteps;
 	private double lerpX;
 	private double lerpY;
 	private double lerpZ;
-	private double lerpYRot;
 	private double lerpXRot;
+	private double lerpYRot;
 	private boolean inputEngineOnActivation;
 	private boolean inputLandingGearActivation;
 	private boolean inputLeft;
@@ -87,6 +90,7 @@ public class TestPlaneEntity extends Entity {
 		this.entityData.define(LEFT, false);
 		this.entityData.define(RIGHT, false);
 		this.entityData.define(LANDING_GEAR, true);
+		this.entityData.define(TRACTOR, false);
 		this.entityData.define(FUEL, 0); // 燃油量，单位mB
 	}
 
@@ -172,15 +176,15 @@ public class TestPlaneEntity extends Entity {
 		super.tick();
 		this.tickLerp();
 		if (this.isControlledByLocalInstance()) {
-			this.lift(); // 升力
-			this.resistance(); // 阻力
+//			this.lift(); // 升力
+//			this.resistance(); // 阻力
 			if (this.level.isClientSide) {
-				this.controlPlane();
-				// 经测试，不发包不影响游戏体验
+//				this.controlPlane();
+				// TODO
 //				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(this.getSpeedUp(), this.getLeft(), this.getRight()));
 			}
 
-			this.move(MoverType.SELF, this.getDeltaMovement());
+			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO
 		} else {
 			this.setDeltaMovement(Vec3.ZERO);
 		}
@@ -229,17 +233,15 @@ public class TestPlaneEntity extends Entity {
 
 	public void changeEngineState() {
 		if (this.inputEngineOnActivation) {
-			if (this.entityData.get(ENGINE_ON)) {
-				if (this.entityData.get(LANDING_GEAR) && this.status == Status.ON_LAND) {
-					this.entityData.set(ENGINE_ON, false);
-				}
+			if (this.getEngineState()) {
+				this.setEngineState(false);
 			} else {
 //				if (this.entityData.get(FUEL) > 0) {
-				this.entityData.set(ENGINE_ON, true);
+				if (!this.getTractor()) this.setEngineState(true);
 //				}
 			}
 			if (this.level.isClientSide) {
-				NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePacket(this.entityData.get(ENGINE_ON)));
+				NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePacket(this.getEngineState()));
 			}
 		}
 	}
@@ -259,9 +261,9 @@ public class TestPlaneEntity extends Entity {
 
 	public void changeLandingGear() {
 		if (this.inputLandingGearActivation) {
-			this.entityData.set(LANDING_GEAR, !this.entityData.get(LANDING_GEAR));
+			this.entityData.set(LANDING_GEAR, !this.getLandingGear());
 			if (this.level.isClientSide) {
-				NetworkHandler.INSTANCE.sendToServer(new PlaneLandingGearPacket(this.entityData.get(LANDING_GEAR)));
+				NetworkHandler.INSTANCE.sendToServer(new PlaneLandingGearPacket(this.getLandingGear()));
 			}
 		}
 	}
@@ -272,6 +274,21 @@ public class TestPlaneEntity extends Entity {
 
 	public void setLandingGear(boolean state) {
 		this.entityData.set(LANDING_GEAR, state);
+	}
+
+	public boolean getTractor() {
+		return this.entityData.get(TRACTOR);
+	}
+
+	public void setTractor(boolean state) {
+		if (this.level.isClientSide) {
+			NetworkHandler.INSTANCE.sendToServer(new PlaneTractorPacket(this.getLandingGear()));
+		} else {
+			if (!state && this.getTractor() && this.getControllingPassenger() instanceof Player player) {
+				player.addItem(new ItemStack(ItemList.TRACTOR.get()));
+			}
+		}
+		this.entityData.set(TRACTOR, state);
 	}
 
 	public boolean getSpeedUp() {
@@ -298,7 +315,7 @@ public class TestPlaneEntity extends Entity {
 		this.entityData.set(RIGHT, right);
 	}
 
-	private TestPlaneEntity.Status getStatus() {
+	private Status getStatus() {
 		if (this.checkUnderWater()) {
 			return Status.OTHER;
 		} else if (this.isAboveWater()) {
@@ -307,7 +324,7 @@ public class TestPlaneEntity extends Entity {
 			float f = this.getGroundFriction();
 			if (f > 0.0F) {
 				this.landFriction = f;
-				return Status.ON_LAND;
+				return this.getLandingGear() ? Status.STAND_ON_LAND : Status.LIE_ON_LAND;
 			} else {
 				return Status.IN_AIR;
 			}
@@ -439,31 +456,39 @@ public class TestPlaneEntity extends Entity {
 		return flag;
 	}
 
+	/*
 	private void resistance() { // TODO 计算阻力
-		this.invFriction = 0.05F; // 运动和旋转阻力，数值越小代表阻力越大
+		float invFriction = 0.05F; // 运动和旋转阻力，数值越小代表阻力越大
+		float resistance = 0.0F;
 		if (this.status == Status.ABOVE_WATER) {
-			this.invFriction = 0.7F;
+			resistance = 0.3F;
 		} else if (this.status == Status.OTHER) {
-			this.invFriction = 0.0F;
+			resistance = 0.0F;
 		} else if (this.status == Status.IN_AIR) {
-			this.invFriction = 0.9F;
-		} else if (this.status == Status.ON_LAND) { // TODO 需要添加擦地阻力
-			if (this.entityData.get(ENGINE_ON) && this.entityData.get(LANDING_GEAR)) {
-				this.invFriction = 0.99F;
-			} else {
-				this.invFriction = 0.9F;
-			}
-			this.deltaYawRotate = 0.0F;
+			resistance = 0.1F;
+		} else if (this.status == Status.STAND_ON_LAND) {
+			resistance = 0.2F;
+		} else if (this.status == Status.LIE_ON_LAND) {
+			resistance = 1.0F / this.landFriction * 0.2F;
 		}
 
-		this.setDeltaMovement(this.getDeltaMovement().multiply(this.invFriction, 1.0D, this.invFriction));
-		this.deltaYawRotate *= this.invFriction;
+		Vec3d vec3d = new Vec3d(0.0D, 0.0D, resistance).xRot(Math.toRadians(this.getXRot())).yRot(Math.toRadians(-this.getYRot())).zRot(Math.toRadians(this.zRot));
+		Vec3 motion = this.getDeltaMovement();
+		double newX = vec3d.x;
+		double newY = vec3d.y;
+		double newZ = vec3d.z;
+		if ((motion.x >= 0 && motion.x - vec3d.x < 0) || (motion.x < 0 && motion.x - vec3d.x > 0)) newX = motion.x;
+		if ((motion.y >= 0 && motion.y - vec3d.y < 0) || (motion.y < 0 && motion.y - vec3d.y > 0)) newY = motion.y;
+		if ((motion.z >= 0 && motion.z - vec3d.z < 0) || (motion.z < 0 && motion.z - vec3d.z > 0)) newZ = motion.z;
+		this.setDeltaMovement(this.getDeltaMovement().add(new Vec3(newX, newY, newZ).scale(-1.0D)));
+		System.out.println(new Vec3(newX, newY, newZ).scale(-1.0D));
+		this.deltaYaw *= invFriction;
 	}
 
 	private void lift() { // 升力
 		float gravity = this.isNoGravity() ? 0.0F : -0.04F;
 		double lift = 0.0D;
-		if (this.oldStatus == Status.IN_AIR && this.status == Status.ON_LAND) { // 从空中降落地面
+		if (this.oldStatus == Status.IN_AIR && this.status == Status.STAND_ON_LAND) { // 从空中降落地面
 //			this.setPos(this.getX(), (double)(this.getWaterLevelAbove() - this.getBbHeight()) + 0.101D, this.getZ()); TODO
 			this.setDeltaMovement(this.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D));
 		}
@@ -474,35 +499,25 @@ public class TestPlaneEntity extends Entity {
 	private void controlPlane() {
 		if (this.isVehicle()) {
 			float f = 0.0F;
-			if (this.status == Status.ON_LAND && !this.entityData.get(ENGINE_ON) && this.entityData.get(LANDING_GEAR)) {
-				if (this.inputLeft) {
-					--this.deltaYawRotate;
-				}
-
-				if (this.inputRight) {
-					++this.deltaYawRotate;
-				}
-			} else if (this.status == Status.IN_AIR) { // TODO 根据速度确定加速度
-				if (this.inputLeft) {
-					--this.deltaYawRotate;
-				}
-
-				if (this.inputRight) {
-					++this.deltaYawRotate;
+			if (this.status == Status.STAND_ON_LAND) {
+				if (this.getTractor()) {
+					if (this.inputLeft) this.deltaYaw -= 0.5F;
+					if (this.inputRight) this.deltaYaw += 0.5F;
+					if (this.inputSpeedUp) f += 0.020202020202020204F;
+				} else if (this.getEngineState()) {
+					if (this.inputSpeedUp) f += 1.0101010101010102F;
 				}
 			}
-			this.setYRot(this.getYRot() + this.deltaYawRotate);
-
-			if (this.inputSpeedUp) {
-				if (this.entityData.get(ENGINE_ON)) {
-					f += 0.1F;
-				} else if (this.status == Status.ON_LAND && this.entityData.get(LANDING_GEAR)) {
-					f += 0.04F;
-				}
+			if (this.status == Status.IN_AIR) {
+				if (this.inputLeft) this.deltaYaw -= this.getDeltaMovement().length() / 50.0F;
+				if (this.inputRight) this.deltaYaw += this.getDeltaMovement().length() / 50.0F;
+				if (this.inputSpeedUp) f += 1.0101010101010102F;
 			}
 
-//			this.setDeltaMovement(this.getDeltaMovement().add(Mth.sin(-this.getYRot() * ((float) Math.PI / 180F)) * f, 0.0D, Mth.cos(this.getYRot() * ((float) Math.PI / 180F)) * f));
-			this.setDeltaMovement(this.getDeltaMovement().add(Math.sin(Math.toRadians(-this.getYRot())) * f, 0.0D, Math.cos(Math.toRadians(this.getYRot())) * f));
+			Vec3d motion = new Vec3d(0.0D, 0.0D, f);
+			this.setYRot(this.getYRot() + this.deltaYaw);
+//			this.setDeltaMovement(this.getDeltaMovement().add(Math.sin(Math.toRadians(-this.getYRot())) * f, 0.0D, Math.cos(Math.toRadians(this.getYRot())) * f));
+			this.setDeltaMovement(this.getDeltaMovement().add(motion.xRot(Math.toRadians(this.getXRot())).yRot(Math.toRadians(-this.getYRot())).zRot(Math.toRadians(this.zRot))));
 //			this.setControlState(this.inputSpeedUp, this.inputLeft, this.inputRight);
 		}
 	}
@@ -512,11 +527,12 @@ public class TestPlaneEntity extends Entity {
 	public void positionRider(Entity passenger) {
 		if (this.hasPassenger(passenger)) {
 			passenger.setPos(this.calculateRiderPosition());
-			passenger.setYRot(passenger.getYRot() + this.deltaYawRotate);
-			passenger.setYHeadRot(passenger.getYHeadRot() + this.deltaYawRotate);
+			passenger.setYRot(passenger.getYRot() + this.deltaYaw);
+			passenger.setYHeadRot(passenger.getYHeadRot() + this.deltaYaw);
 			this.clampRotation(passenger);
 		}
 	}
+*/
 
 	private Vec3 calculateRiderPosition() {
 		return new Vec3(this.getX(), this.getY(), this.getZ()).add(this.calculateRiderOffset());
@@ -543,7 +559,8 @@ public class TestPlaneEntity extends Entity {
 
 	public enum Status {
 		ABOVE_WATER, // 以后写水路两栖飞机可能用到
-		ON_LAND,
+		STAND_ON_LAND,
+		LIE_ON_LAND,
 		IN_AIR,
 		OTHER
 	}
@@ -552,21 +569,30 @@ public class TestPlaneEntity extends Entity {
 	protected void readAdditionalSaveData(CompoundTag tag) {
 		this.entityData.set(ENGINE_ON, tag.getBoolean("EngineState"));
 		this.entityData.set(LANDING_GEAR, tag.getBoolean("LandingGear"));
+		this.entityData.set(TRACTOR, tag.getBoolean("Tractor"));
 	}
 
 	@Override
 	protected void addAdditionalSaveData(CompoundTag tag) {
-		tag.putBoolean("EngineState", this.entityData.get(ENGINE_ON));
-		tag.putBoolean("LandingGear", this.entityData.get(LANDING_GEAR));
+		tag.putBoolean("EngineState", this.getEngineState());
+		tag.putBoolean("LandingGear", this.getLandingGear());
+		tag.putBoolean("Tractor", this.getTractor());
 	}
 
 	@Override
-	public InteractionResult interact(Player pPlayer, InteractionHand pHand) {
-		if (pPlayer.isSecondaryUseActive()) {
+	public InteractionResult interact(Player player, InteractionHand hand) {
+		if (player.isSecondaryUseActive()) {
+			return InteractionResult.PASS;
+		} else if (player.getItemInHand(hand).is(ItemList.TRACTOR.get()) && this.status == Status.STAND_ON_LAND && !this.getTractor()) {
+			if (this.getControllingPassenger() == null && !this.level.isClientSide) {
+				this.setTractor(true);
+				if (!player.isCreative()) player.getItemInHand(hand).shrink(1);
+				return InteractionResult.CONSUME;
+			}
 			return InteractionResult.PASS;
 		} else if (this.outOfControlTicks < 60.0F) {
 			if (!this.level.isClientSide) {
-				return pPlayer.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
+				return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
 			} else {
 				return InteractionResult.SUCCESS;
 			}
