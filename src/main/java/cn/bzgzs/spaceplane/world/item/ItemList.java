@@ -15,10 +15,10 @@ public class ItemList {
 	// vvvbbbcz:物品注册
 	public static final RegistryObject<Item> RHENIUM_INGOT = ITEMS.register("rhenium_ingot", () -> new Item(new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<Item> NICKEL_INGOT = ITEMS.register("nickel_ingot", () -> new Item(new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
-	public static final RegistryObject<Item> RHENIUM_SWORD = ITEMS.register("rhenium_sword", () -> new SwordItem(ModItemTiers.RHENIUM,3,-2.4F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
-	public static final RegistryObject<Item> NICKEL_SWORD = ITEMS.register("nickel_sword", () -> new SwordItem(ModItemTiers.NICKEL,3,-2.4F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
-	public static final RegistryObject<Item> RHENIUM_PICKAXE = ITEMS.register("rhenium_pickaxe", () -> new PickaxeItem(ModItemTiers.RHENIUM,-3,-1.5F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
-	public static final RegistryObject<Item> NICKEL_PICKAXE = ITEMS.register("nickel_pickaxe", () -> new PickaxeItem(ModItemTiers.NICKEL,-3,-1.5F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
+	public static final RegistryObject<Item> RHENIUM_SWORD = ITEMS.register("rhenium_sword", () -> new SwordItem(TierList.RHENIUM,3,-2.4F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
+	public static final RegistryObject<Item> NICKEL_SWORD = ITEMS.register("nickel_sword", () -> new SwordItem(TierList.NICKEL,3,-2.4F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
+	public static final RegistryObject<Item> RHENIUM_PICKAXE = ITEMS.register("rhenium_pickaxe", () -> new PickaxeItem(TierList.RHENIUM,-3,-1.5F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
+	public static final RegistryObject<Item> NICKEL_PICKAXE = ITEMS.register("nickel_pickaxe", () -> new PickaxeItem(TierList.NICKEL,-3,-1.5F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<Item> TRACTOR = ITEMS.register("tractor", () -> new Item(new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	// vvvbbbcz:方块的物品形态注册
 	public static final RegistryObject<BlockItem> RHENIUM_ORE = ITEMS.register("rhenium_ore", () -> new BlockItem(BlockList.RHENIUM_ORE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));

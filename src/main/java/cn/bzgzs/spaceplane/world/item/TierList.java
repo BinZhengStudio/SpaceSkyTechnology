@@ -6,7 +6,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import javax.annotation.Nonnull;
 import java.util.function.Supplier;
 
-public enum ModItemTiers implements Tier {
+public enum TierList implements Tier {
 
 	RHENIUM(5, 3000, 13.0F, 10.0F, 16, () -> Ingredient.of(ItemList.RHENIUM_INGOT.get())),
 	NICKEL(2, 500, 7.0F, 7.0F, 14, () -> Ingredient.of(ItemList.NICKEL_INGOT.get()));
@@ -18,7 +18,7 @@ public enum ModItemTiers implements Tier {
 	private final int enchantmentValue; // 附魔经验叠加
 	private final Supplier<Ingredient> repairIngredient; // 修理材料
 
-	ModItemTiers(int level, int uses, float speed, float damage, int enchantmentValue, @Nonnull Supplier<Ingredient> repairIngredient) {
+	TierList(int level, int uses, float speed, float damage, int enchantmentValue, @Nonnull Supplier<Ingredient> repairIngredient) {
 		this.level = level;
 		this.uses = uses;
 		this.speed = speed;
