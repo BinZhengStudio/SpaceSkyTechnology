@@ -11,6 +11,10 @@
 
   "item.spaceplane.rhenium_ingot": "铼锭",
   "item.spaceplane.nickel_ingot": "镍锭",
+  "item.spaceplane.rhenium_sword": "铼剑",
+  "item.spaceplane.nickel_sword": "镍剑",
+  "item.spaceplane.rhenium_pickaxe": "铼稿",
+  "item.spaceplane.nickel_pickaxe": "镍稿",
   "item.spaceplane.tractor": "牵引器",
 
   "container.spaceplane.steam_engine": "蒸汽引擎",

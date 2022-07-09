@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern":[
+    " # ",
+    " # ",
+    " k "
+  ],
+  "key": {
+    "#": {
+      "item": "spaceplane:rhenium_ingot"
+    },
+    "k": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "item": "spaceplane:rhenium_sword",
+    "count": 1
+  }
+}

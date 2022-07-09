@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern":[
+    "###",
+    " k ",
+    " k "
+  ],
+  "key": {
+    "#": {
+      "item": "spaceplane:nickel_ingot"
+    },
+    "k": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "item": "spaceplane:nickel_pickaxe",
+    "count": 1
+  }
+}
