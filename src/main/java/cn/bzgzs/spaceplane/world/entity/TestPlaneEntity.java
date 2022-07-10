@@ -190,7 +190,9 @@ public class TestPlaneEntity extends Entity {
 				}
 				case LIE_ON_GROUND -> {
 					// TODO
+					this.liftStandOnGround();
 				}
+				default -> this.liftStandOnGround();
 			}
 //			this.lift(); // 升力
 //			this.resistance(); // 阻力
@@ -218,24 +220,50 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	private void controlTractor() {
-		// TODO
+		if (this.level.isClientSide) {
+			this.deltaYaw = 0;
+			if (this.inputSpeedUp) {
+				this.move(MoverType.SELF, new Vec3d(0.0D, 0.0D, 0.35D).yRot(this.getYRotRad()));
+			}
+			if (this.inputLeft) {
+				this.deltaYaw -= 2;
+			}
+			if (this.inputRight) {
+				this.deltaYaw += 2;
+			}
+			this.setYRot(this.getYRot() + this.deltaYaw);
+		}
 	}
 
 	private void liftStandOnGround() {
 		float gravity = 0.04F;
-		double lift = 0.017777777777777778D * this.getDeltaMovement().horizontalDistanceSqr();
-		this.setDeltaMovement(this.getDeltaMovement().add(0.0F, lift - gravity, 0.0F));
+//		double lift = 0.017777777777777778D * this.getDeltaMovement().horizontalDistanceSqr();
+		this.setDeltaMovement(this.getDeltaMovement().add(0.0F, -gravity, 0.0F));
 	}
 
 	private void resistanceStandOnGround() {
-		Vec3d vec3d = new Vec3d(0.0D, 0.0D, -0.13333333333333333D * this.getDeltaMovement().horizontalDistance() + 0.2D);
-		this.setDeltaMovement(this.getDeltaMovement().add(vec3d.yRot(this.getYRotRad())));
+		Vec3d res = new Vec3d(0.0D, 0.0D, 0.2D).yRot(this.getYRotRad());
+		Vec3 motion = this.getDeltaMovement();
+		double x = res.x;
+		double z = res.z;
+		if (motion.x >= 0 && motion.x - Math.abs(x) < 0)
+			x = motion.x;
+		if (motion.x < 0 && motion.x + Math.abs(x) > 0)
+			x = motion.x;
+		if (motion.z >= 0 && motion.z - Math.abs(z) < 0)
+			z = motion.z;
+		if (motion.z < 0 && motion.z + Math.abs(z) > 0)
+			z = motion.z;
+		this.setDeltaMovement(this.getDeltaMovement().add(new Vec3(-x, 0.0D, -z)));
 	}
 
 	private void controlStandOnGround() {
-		if (this.inputSpeedUp) {
+		if (this.level.isClientSide && this.inputSpeedUp) {
 			this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, 1.0D).yRot(this.getYRotRad())));
 		}
+	}
+
+	private void calcAirResistance() {
 	}
 
 	private void tickLerp() {
@@ -319,7 +347,7 @@ public class TestPlaneEntity extends Entity {
 
 	public void setTractor(boolean state) {
 		if (this.level.isClientSide) {
-			NetworkHandler.INSTANCE.sendToServer(new PlaneTractorPacket(this.getLandingGear()));
+			NetworkHandler.INSTANCE.sendToServer(new PlaneTractorPacket(state));
 		} else {
 			if (!state && this.getTractor() && this.getControllingPassenger() instanceof Player player) {
 				player.addItem(new ItemStack(ItemList.TRACTOR.get()));
@@ -493,6 +521,17 @@ public class TestPlaneEntity extends Entity {
 		return flag;
 	}
 
+	// TODO 临时代码
+	@Override
+	public void positionRider(Entity passenger) {
+		if (this.hasPassenger(passenger)) {
+			passenger.setPos(this.calculateRiderPosition());
+			passenger.setYRot(passenger.getYRot() + this.deltaYaw);
+			passenger.setYHeadRot(passenger.getYHeadRot() + this.deltaYaw);
+			this.clampRotation(passenger);
+		}
+	}
+
 	private Vec3 calculateRiderPosition() {
 		return new Vec3(this.getX(), this.getY(), this.getZ()).add(this.calculateRiderOffset());
 	}
@@ -529,7 +568,7 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	public double getYRotRad() {
-		return Math.toRadians(this.getYRot());
+		return -Math.toRadians(this.getYRot());
 	}
 
 	public float getZRot() {
@@ -566,7 +605,7 @@ public class TestPlaneEntity extends Entity {
 	public InteractionResult interact(Player player, InteractionHand hand) {
 		if (player.isSecondaryUseActive()) {
 			return InteractionResult.PASS;
-		} else if (player.getItemInHand(hand).is(ItemList.TRACTOR.get()) && this.status == Status.STAND_ON_GROUND && !this.getTractor()) {
+		} else if (player.getItemInHand(hand).is(ItemList.TRACTOR.get()) && this.status == Status.STAND_ON_GROUND && !this.getTractor() && !this.getEngineState()) {
 			if (this.getControllingPassenger() == null && !this.level.isClientSide) {
 				this.setTractor(true);
 				if (!player.isCreative()) player.getItemInHand(hand).shrink(1);
