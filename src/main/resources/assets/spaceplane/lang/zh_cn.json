@@ -15,6 +15,10 @@
   "item.spaceplane.nickel_sword": "镍剑",
   "item.spaceplane.rhenium_pickaxe": "铼镐",
   "item.spaceplane.nickel_pickaxe": "镍镐",
+  "item.spaceplane.rhenium_shovel": "铼锹",
+  "item.spaceplane.nickel_shovel": "镍锹",
+  "item.spaceplane.rhenium_axe": "铼斧",
+  "item.spaceplane.nickel_axe": "镍斧",
   "item.spaceplane.tractor": "牵引器",
 
   "container.spaceplane.steam_engine": "蒸汽引擎",
