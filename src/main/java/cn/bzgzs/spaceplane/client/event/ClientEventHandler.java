@@ -16,7 +16,18 @@ public class ClientEventHandler {
 	public static void keyInputEvent(InputEvent.KeyInputEvent event) {
 		if (Minecraft.getInstance().player != null) {
 			if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
-				plane.setClientInput(KeyboardInputList.PLANE_LEFT.isDown(), KeyboardInputList.PLANE_RIGHT.isDown(), KeyboardInputList.PLANE_SPEED_UP.isDown());
+				plane.setClientInput(KeyboardInputList.PLANE_LOOK_UP.isDown(),
+						KeyboardInputList.PLANE_LOOK_DOWN.isDown(),
+						KeyboardInputList.PLANE_LEFT_ROLL.isDown(),
+						KeyboardInputList.PLANE_RIGHT_ROLL.isDown(),
+						KeyboardInputList.PLANE_CLIMB_UP.isDown(),
+						KeyboardInputList.PLANE_DECLINE.isDown(),
+						KeyboardInputList.PLANE_LEFT.isDown(),
+						KeyboardInputList.PLANE_RIGHT.isDown(),
+						KeyboardInputList.PLANE_SPEED_UP.isDown(),
+						KeyboardInputList.LAUNCH_MISSILE.isDown(),
+						KeyboardInputList.INTERCEPTOR_MISSILE.isDown(),
+						KeyboardInputList.LAUNCH_CANNONBALL.isDown());
 				plane.setInputEngineOnActivation(KeyboardInputList.ENGINE_ON.isDown());
 				plane.setInputLandingGearActivation(KeyboardInputList.LANDING_GEAR.isDown());
 				if (plane.getTractor() && KeyboardInputList.SEPARATE_TRACTOR.isDown()) {

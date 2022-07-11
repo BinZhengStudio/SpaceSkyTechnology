@@ -2,6 +2,7 @@ package cn.bzgzs.spaceplane.world.entity;
 
 import cn.bzgzs.spaceplane.network.NetworkHandler;
 import cn.bzgzs.spaceplane.network.client.PlaneEnginePacket;
+import cn.bzgzs.spaceplane.network.client.PlaneEnginePowerPacket;
 import cn.bzgzs.spaceplane.network.client.PlaneLandingGearPacket;
 import cn.bzgzs.spaceplane.network.client.PlaneTractorPacket;
 import cn.bzgzs.spaceplane.world.item.ItemList;
@@ -44,6 +45,7 @@ public class TestPlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> LANDING_GEAR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> TRACTOR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> ENGINE_POWER = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	public static final int LANDING_GEAR_HEIGHT = 2;
 	private float outOfControlTicks;
 	private float zRot;
@@ -56,10 +58,18 @@ public class TestPlaneEntity extends Entity {
 	private double lerpYRot;
 	private boolean inputEngineOnActivation;
 	private boolean inputLandingGearActivation;
+	private boolean inputLookUp;
+	private boolean inputLookDown;
+	private boolean inputLeftRoll;
+	private boolean inputRightRoll;
+	private boolean inputClimbUp;
+	private boolean inputDecline;
 	private boolean inputLeft;
 	private boolean inputRight;
 	private boolean inputSpeedUp;
-	private float landFriction;
+	private boolean inputLaunchMissile;
+	private boolean inputInterceptorMissile;
+	private boolean inputLaunchCannonball;
 	private TestPlaneEntity.Status status;
 	private TestPlaneEntity.Status oldStatus;
 
@@ -94,6 +104,7 @@ public class TestPlaneEntity extends Entity {
 		this.entityData.define(LANDING_GEAR, true);
 		this.entityData.define(TRACTOR, false);
 		this.entityData.define(FUEL, 0); // 燃油量，单位mB
+		this.entityData.define(ENGINE_POWER, 0);
 	}
 
 	@Override
@@ -185,14 +196,23 @@ public class TestPlaneEntity extends Entity {
 					} else {
 						this.liftStandOnGround();
 						this.resistanceStandOnGround();
-						if (this.getEngineState()) this.controlStandOnGround();
+						this.controlStandOnGround();
 					}
 				}
 				case LIE_ON_GROUND -> {
-					// TODO
 					this.liftStandOnGround();
+					this.resistanceLieOnGround();
+					this.controlStandOnGround();
 				}
-				default -> this.liftStandOnGround();
+				case ABOVE_WATER -> {
+					this.liftStandOnGround();
+					this.resistanceLieOnGround(); // TODO
+				}
+				case IN_AIR -> {
+					this.flyInAir();
+					this.controlInAir();
+				}
+				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
 			}
 //			this.lift(); // 升力
 //			this.resistance(); // 阻力
@@ -205,6 +225,20 @@ public class TestPlaneEntity extends Entity {
 			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO
 		} else {
 			this.setDeltaMovement(Vec3.ZERO);
+		}
+
+		if (this.level.isClientSide) {
+			if (this.getEngineState() && this.inputSpeedUp) {
+				if (this.getEnginePower() < 100) {
+					this.setEnginePower(this.getEnginePower() + 1);
+					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this.getEnginePower()));
+				}
+			} else {
+				if (this.getEnginePower() > 0) {
+					this.setEnginePower(Math.max(this.getEnginePower() - 5, 0));
+					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this.getEnginePower()));
+				}
+			}
 		}
 
 		this.checkInsideBlocks(); // TODO 以后要覆写的
@@ -237,8 +271,8 @@ public class TestPlaneEntity extends Entity {
 
 	private void liftStandOnGround() {
 		float gravity = 0.04F;
-//		double lift = 0.017777777777777778D * this.getDeltaMovement().horizontalDistanceSqr();
-		this.setDeltaMovement(this.getDeltaMovement().add(0.0F, -gravity, 0.0F));
+		double lift = 0.017777777777777778D * this.getDeltaMovement().horizontalDistanceSqr();
+		this.setDeltaMovement(this.getDeltaMovement().add(0.0F, lift - gravity, 0.0F));
 	}
 
 	private void resistanceStandOnGround() {
@@ -246,24 +280,30 @@ public class TestPlaneEntity extends Entity {
 		Vec3 motion = this.getDeltaMovement();
 		double x = res.x;
 		double z = res.z;
-		if (motion.x >= 0 && motion.x - Math.abs(x) < 0)
-			x = motion.x;
-		if (motion.x < 0 && motion.x + Math.abs(x) > 0)
-			x = motion.x;
-		if (motion.z >= 0 && motion.z - Math.abs(z) < 0)
-			z = motion.z;
-		if (motion.z < 0 && motion.z + Math.abs(z) > 0)
-			z = motion.z;
-		this.setDeltaMovement(this.getDeltaMovement().add(new Vec3(-x, 0.0D, -z)));
+		if (motion.x >= 0 && motion.x - Math.abs(x) < 0) x = motion.x;
+		if (motion.x < 0 && motion.x + Math.abs(x) > 0) x = motion.x;
+		if (motion.z >= 0 && motion.z - Math.abs(z) < 0) z = motion.z;
+		if (motion.z < 0 && motion.z + Math.abs(z) > 0) z = motion.z;
+		Vec3d airRes = new Vec3d(0.0D, 0.0D, 0.04D * motion.horizontalDistanceSqr()).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().add(new Vec3(-x, 0.0D, -z).add(airRes)));
 	}
 
 	private void controlStandOnGround() {
-		if (this.level.isClientSide && this.inputSpeedUp) {
-			this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, 1.0D).yRot(this.getYRotRad())));
+		if (this.level.isClientSide && this.getEngineState()) {
+			this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).yRot(this.getYRotRad())));
 		}
 	}
 
-	private void calcAirResistance() {
+	private void resistanceLieOnGround() {
+		Vec3d res = new Vec3d(0.0D, 0.0D, 1.0D).yRot(this.getYRotRad());
+		Vec3 motion = this.getDeltaMovement();
+		double x = res.x;
+		double z = res.z;
+		if (motion.x >= 0 && motion.x - Math.abs(x) < 0) x = motion.x;
+		if (motion.x < 0 && motion.x + Math.abs(x) > 0) x = motion.x;
+		if (motion.z >= 0 && motion.z - Math.abs(z) < 0) z = motion.z;
+		if (motion.z < 0 && motion.z + Math.abs(z) > 0) z = motion.z;
+		this.setDeltaMovement(this.getDeltaMovement().add(new Vec3(-x, 0.0D, -z)));
 	}
 
 	private void tickLerp() {
@@ -282,6 +322,52 @@ public class TestPlaneEntity extends Entity {
 			--this.lerpSteps;
 			this.setPos(d0, d1, d2);
 			this.setRot(this.getYRot(), this.getXRot());
+		}
+	}
+
+	private void flyInAir() {
+		float gravity = 0.08F;
+		Vec3 motion = this.getDeltaMovement();
+		if (motion.y > -0.5D) {
+			this.fallDistance = 1.0F;
+		}
+
+		Vec3 lookAngle = this.getLookAngle(); // 实体朝向的向量
+		double lookDistance = lookAngle.horizontalDistance(); // 实体朝向水平长度
+		double motionDistance = motion.horizontalDistance(); // 实体运动水平速度
+		double lookLength = lookAngle.length(); // 实体朝向长度
+		double cosXRot = Math.cos(this.getXRotRad()); // ?
+		cosXRot = cosXRot * cosXRot * Math.min(1.0D, lookLength / 0.4D);
+		motion = this.getDeltaMovement().add(0.0D, gravity * (-1.0D + cosXRot * 0.75D), 0.0D);
+		if (motion.y < 0.0D && lookDistance > 0.0D) {
+			double d6 = motion.y * -0.1D * cosXRot;
+			motion = motion.add(lookAngle.x * d6 / lookDistance, d6, lookAngle.z * d6 / lookDistance);
+		}
+
+		if (this.getXRotRad() < 0.0F && lookDistance > 0.0D) {
+			double d10 = motionDistance * -Math.sin(this.getXRotRad()) * 0.04D;
+			motion = motion.add(-lookAngle.x * d10 / lookDistance, d10 * 3.2D, -lookAngle.z * d10 / lookDistance);
+		}
+
+		if (lookDistance > 0.0D) {
+			motion = motion.add((lookAngle.x / lookDistance * motionDistance - motion.x) * 0.1D, 0.0D, (lookAngle.z / lookDistance * motionDistance - motion.z) * 0.1D);
+		}
+
+		this.setDeltaMovement(motion.multiply(0.99D, 0.98D, 0.99D));
+		this.move(MoverType.SELF, this.getDeltaMovement());
+		if (this.horizontalCollision && !this.level.isClientSide) {
+			double d11 = this.getDeltaMovement().horizontalDistance();
+			double d7 = motionDistance - d11;
+			float f1 = (float) (d7 * 10.0D - 3.0D);
+			if (f1 > 0.0F) {
+//				this.playSound(this.getFallDamageSound((int)f1), 1.0F, 1.0F);
+//				this.hurt(DamageSource.FLY_INTO_WALL, f1);
+			}
+		}
+	}
+
+	private void controlInAir() {
+		if (this.level.isClientSide) {
 		}
 	}
 
@@ -356,6 +442,14 @@ public class TestPlaneEntity extends Entity {
 		this.entityData.set(TRACTOR, state);
 	}
 
+	public int getEnginePower() {
+		return this.entityData.get(ENGINE_POWER);
+	}
+
+	public void setEnginePower(int power) {
+		this.entityData.set(ENGINE_POWER, power);
+	}
+
 	public boolean getSpeedUp() {
 		return this.entityData.get(SPEED_UP);
 	}
@@ -388,7 +482,6 @@ public class TestPlaneEntity extends Entity {
 		} else {
 			float f = this.getGroundFriction();
 			if (f > 0.0F) {
-				this.landFriction = f;
 				return this.getLandingGear() ? Status.STAND_ON_GROUND : Status.LIE_ON_GROUND;
 			} else {
 				return Status.IN_AIR;
@@ -589,9 +682,10 @@ public class TestPlaneEntity extends Entity {
 
 	@Override
 	protected void readAdditionalSaveData(CompoundTag tag) {
-		this.entityData.set(ENGINE_ON, tag.getBoolean("EngineState"));
-		this.entityData.set(LANDING_GEAR, tag.getBoolean("LandingGear"));
-		this.entityData.set(TRACTOR, tag.getBoolean("Tractor"));
+		this.setEngineState(tag.getBoolean("EngineState"));
+		this.setLandingGear(tag.getBoolean("LandingGear"));
+		this.setTractor(tag.getBoolean("Tractor"));
+		this.setEnginePower(tag.getInt("EnginePower"));
 	}
 
 	@Override
@@ -599,6 +693,7 @@ public class TestPlaneEntity extends Entity {
 		tag.putBoolean("EngineState", this.getEngineState());
 		tag.putBoolean("LandingGear", this.getLandingGear());
 		tag.putBoolean("Tractor", this.getTractor());
+		tag.putInt("EnginePower", this.getEnginePower());
 	}
 
 	@Override
@@ -633,10 +728,21 @@ public class TestPlaneEntity extends Entity {
 		return this.getFirstPassenger();
 	}
 
-	public void setClientInput(boolean left, boolean right, boolean speedUp) {
+	public void setClientInput(boolean lookUp, boolean lookDown, boolean leftRoll, boolean rightRoll,
+							   boolean climbUp, boolean decline, boolean left, boolean right, boolean speedUp,
+							   boolean launchMissile, boolean interceptorMissile, boolean launchCannonball) {
+		this.inputLookUp = lookUp;
+		this.inputLookDown = lookDown;
+		this.inputLeftRoll = leftRoll;
+		this.inputRightRoll = rightRoll;
+		this.inputClimbUp = climbUp;
+		this.inputDecline = decline;
 		this.inputLeft = left;
 		this.inputRight = right;
 		this.inputSpeedUp = speedUp;
+		this.inputLaunchMissile = launchMissile;
+		this.inputInterceptorMissile = interceptorMissile;
+		this.inputLaunchCannonball = launchCannonball;
 	}
 
 	@Override
