@@ -269,18 +269,23 @@ public class TestPlaneEntity extends Entity {
 	private void liftStandOnGround() {
 		float gravity = 0.04F;
 		double lift = 0.017777777777777778D * this.getDeltaMovement().horizontalDistanceSqr();
-		if (this.inputClimbUp) lift *= 2;
-		this.setDeltaMovement(this.getDeltaMovement().add(0.0F, lift - gravity, 0.0F));
+		if (this.inputClimbUp) {
+			lift *= 2;
+		} else if (this.inputDecline) {
+			lift *= -2;
+		}
+		Vec3 motion = this.getDeltaMovement();
+		this.setDeltaMovement(new Vec3(motion.x, lift - gravity, motion.z));
 	}
 
 	private void resistanceStandOnGround() {
-		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputClimbUp ? 0.23D : 0.2D).yRot(this.getYRotRad());
+		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 0.23D : 0.2D).yRot(this.getYRotRad());
 		Vec3d airRes = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res.add(airRes))));
 	}
 
 	private void resistanceLieOnGround() {
-		Vec3d res = new Vec3d(0.0D, 0.0D, 1.0D).yRot(this.getYRotRad());
+		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 1.1D : 1.0D).yRot(this.getYRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
@@ -311,22 +316,21 @@ public class TestPlaneEntity extends Entity {
 		}
 	}
 
-	private void flyInAir() {
+	private void flyInAir() { // TODO 麻了，整个都要重写的
 		Vec3 motion = this.getDeltaMovement();
 		if (motion.y > -0.5D) {
 			this.fallDistance = 1.0F;
 		}
 
 		Vec3 lookAngle = this.getLookAngle(); // 实体朝向的向量
-		double gravity = 0.08D;
 		double lookDistance = lookAngle.horizontalDistance(); // 实体朝向水平长度
 		double motionDistance = motion.horizontalDistance(); // 实体运动水平速度
-		double lookLength = lookAngle.length(); // 实体朝向长度
-		double cosXRot = Math.cos(-this.getXRotRad()); // ?
-		cosXRot = cosXRot * cosXRot * Math.min(1.0D, lookLength / 0.4D);
-		motion = this.getDeltaMovement().add(0.0D, gravity * (-1.0D + cosXRot * 0.75D), 0.0D);
+		double cosXRot = Math.cos(-this.getXRotRad());
+		double cosXRotSqr = cosXRot * cosXRot;
+		double gravity = 0.08D * (-1.0D + cosXRotSqr * 0.75D);
+		motion = this.getDeltaMovement().add(0.0D, gravity, 0.0D);
 		if (motion.y < 0.0D && lookDistance > 0.0D) {
-			double d6 = motion.y * -0.1D * cosXRot;
+			double d6 = motion.y * -0.1D * cosXRotSqr;
 			motion = motion.add(lookAngle.x * d6 / lookDistance, d6, lookAngle.z * d6 / lookDistance);
 		}
 
@@ -345,7 +349,8 @@ public class TestPlaneEntity extends Entity {
 		} else if (this.inputDecline) {
 			lift *= -2;
 		}
-		motion = motion.add(new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad()));
+		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad());
+		motion = motion.add(liftVec);
 
 		this.setDeltaMovement(motion.multiply(0.99D, 0.98D, 0.99D));
 		this.move(MoverType.SELF, this.getDeltaMovement());
