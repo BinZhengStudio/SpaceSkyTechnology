@@ -1,6 +1,6 @@
 package cn.bzgzs.spaceplane.world.entity;
 
-import cn.bzgzs.spaceplane.util.Vec3Helper;
+import cn.bzgzs.spaceplane.util.VecHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -231,17 +231,17 @@ public abstract class BasePlaneEntity extends Entity {
 
 	private Vec3 calculateResistance() { // TODO 需要修改
 		Vec3 vec3 = Vec3.ZERO;
-		vec3 = Vec3Helper.add(vec3, 0, this.getResistanceFuncY(this.entityData.get(Y_SPEED)), -this.getResistanceFuncZ(this.entityData.get(Z_SPEED)));
+		vec3 = VecHelper.add(vec3, 0, this.getResistanceFuncY(this.entityData.get(Y_SPEED)), -this.getResistanceFuncZ(this.entityData.get(Z_SPEED)));
 		return vec3;
 	}
 
 	private Vec3 calculateAccel() { // TODO 还需要加入其他的速度
 		Vec3 vec3 = Vec3.ZERO;
 		if (!this.isOnGround()) {
-			vec3 = Vec3Helper.add(vec3, 0, -GRAVITY_ACCEL, 0);
+			vec3 = VecHelper.add(vec3, 0, -GRAVITY_ACCEL, 0);
 		}
-		vec3 = Vec3Helper.add(vec3, 0, 0, this.entityData.get(POWER));
-		vec3 = Vec3Helper.add(vec3, this.calculateResistance());
+		vec3 = VecHelper.add(vec3, 0, 0, this.entityData.get(POWER));
+		vec3 = VecHelper.add(vec3, this.calculateResistance());
 //		System.out.println(vec3);
 		return vec3;
 	}

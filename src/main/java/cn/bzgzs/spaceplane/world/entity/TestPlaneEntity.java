@@ -5,6 +5,7 @@ import cn.bzgzs.spaceplane.network.client.PlaneEnginePacket;
 import cn.bzgzs.spaceplane.network.client.PlaneEnginePowerPacket;
 import cn.bzgzs.spaceplane.network.client.PlaneLandingGearPacket;
 import cn.bzgzs.spaceplane.network.client.PlaneTractorPacket;
+import cn.bzgzs.spaceplane.util.VecHelper;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.phys.Vec3d;
 import net.minecraft.BlockUtil;
@@ -49,13 +50,16 @@ public class TestPlaneEntity extends Entity {
 	public static final int LANDING_GEAR_HEIGHT = 2;
 	private float outOfControlTicks;
 	private float zRot;
+	private float deltaPitch;
 	private float deltaYaw;
+	private float deltaRoll;
 	private int lerpSteps;
 	private double lerpX;
 	private double lerpY;
 	private double lerpZ;
-	private double lerpXRot;
-	private double lerpYRot;
+	private double lerpPitch;
+	private double lerpYaw;
+	private double lerpRoll;
 	private boolean inputEngineOnActivation;
 	private boolean inputLandingGearActivation;
 	private boolean inputLookUp;
@@ -162,8 +166,8 @@ public class TestPlaneEntity extends Entity {
 		this.lerpX = x;
 		this.lerpY = y;
 		this.lerpZ = z;
-		this.lerpYRot = yaw;
-		this.lerpXRot = pitch;
+		this.lerpYaw = yaw;
+		this.lerpPitch = pitch;
 		this.lerpSteps = 10;
 	}
 
@@ -196,33 +200,26 @@ public class TestPlaneEntity extends Entity {
 					} else {
 						this.liftStandOnGround();
 						this.resistanceStandOnGround();
-						this.controlStandOnGround();
 					}
 				}
 				case LIE_ON_GROUND -> {
 					this.liftStandOnGround();
 					this.resistanceLieOnGround();
-					this.controlStandOnGround();
 				}
 				case ABOVE_WATER -> {
 					this.liftStandOnGround();
-					this.resistanceLieOnGround(); // TODO
+					this.resistanceAboveWater();
 				}
 				case IN_AIR -> {
 					this.flyInAir();
-					this.controlInAir();
+//					this.controlInAir();
 				}
 				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
 			}
-//			this.lift(); // 升力
-//			this.resistance(); // 阻力
-			if (this.level.isClientSide) {
-//				this.controlPlane();
-				// TODO
-//				NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(this.getSpeedUp(), this.getLeft(), this.getRight()));
+			if (this.level.isClientSide && this.getEngineState()) {
+				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).yRot(this.getYRotRad())));
 			}
-
-			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO
+			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO 需要覆写
 		} else {
 			this.setDeltaMovement(Vec3.ZERO);
 		}
@@ -230,7 +227,7 @@ public class TestPlaneEntity extends Entity {
 		if (this.level.isClientSide) {
 			if (this.getEngineState() && this.inputSpeedUp) {
 				if (this.getEnginePower() < 100) {
-					this.setEnginePower(this.getEnginePower() + 1);
+					this.setEnginePower(this.getEnginePower() + 2);
 					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this.getEnginePower()));
 				}
 			} else {
@@ -239,6 +236,8 @@ public class TestPlaneEntity extends Entity {
 					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this.getEnginePower()));
 				}
 			}
+			// TODO
+//			NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(this.getSpeedUp(), this.getLeft(), this.getRight()));
 		}
 
 		this.checkInsideBlocks(); // TODO 以后要覆写的
@@ -255,55 +254,42 @@ public class TestPlaneEntity extends Entity {
 
 	private void controlTractor() {
 		if (this.level.isClientSide) {
-			this.deltaYaw = 0;
 			if (this.inputSpeedUp) {
 				this.move(MoverType.SELF, new Vec3d(0.0D, 0.0D, 0.35D).yRot(this.getYRotRad()));
 			}
 			if (this.inputLeft) {
-				this.deltaYaw -= 2;
+				this.setYRot(this.getYRot() - 2);
 			}
 			if (this.inputRight) {
-				this.deltaYaw += 2;
+				this.setYRot(this.getYRot() + 2);
 			}
-			this.setYRot(this.getYRot() + this.deltaYaw);
 		}
 	}
 
 	private void liftStandOnGround() {
 		float gravity = 0.04F;
 		double lift = 0.017777777777777778D * this.getDeltaMovement().horizontalDistanceSqr();
+		if (this.inputClimbUp) lift *= 2;
 		this.setDeltaMovement(this.getDeltaMovement().add(0.0F, lift - gravity, 0.0F));
 	}
 
 	private void resistanceStandOnGround() {
-		Vec3d res = new Vec3d(0.0D, 0.0D, 0.2D).yRot(this.getYRotRad());
-		Vec3 motion = this.getDeltaMovement();
-		double x = res.x;
-		double z = res.z;
-		if (motion.x >= 0 && motion.x - Math.abs(x) < 0) x = motion.x;
-		if (motion.x < 0 && motion.x + Math.abs(x) > 0) x = motion.x;
-		if (motion.z >= 0 && motion.z - Math.abs(z) < 0) z = motion.z;
-		if (motion.z < 0 && motion.z + Math.abs(z) > 0) z = motion.z;
-		Vec3d airRes = new Vec3d(0.0D, 0.0D, 0.04D * motion.horizontalDistanceSqr()).yRot(this.getYRotRad());
-		this.setDeltaMovement(this.getDeltaMovement().add(new Vec3(-x, 0.0D, -z).add(airRes)));
-	}
-
-	private void controlStandOnGround() {
-		if (this.level.isClientSide && this.getEngineState()) {
-			this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).yRot(this.getYRotRad())));
-		}
+		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputClimbUp ? 0.23D : 0.2D).yRot(this.getYRotRad());
+		Vec3d airRes = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res.add(airRes))));
 	}
 
 	private void resistanceLieOnGround() {
 		Vec3d res = new Vec3d(0.0D, 0.0D, 1.0D).yRot(this.getYRotRad());
-		Vec3 motion = this.getDeltaMovement();
-		double x = res.x;
-		double z = res.z;
-		if (motion.x >= 0 && motion.x - Math.abs(x) < 0) x = motion.x;
-		if (motion.x < 0 && motion.x + Math.abs(x) > 0) x = motion.x;
-		if (motion.z >= 0 && motion.z - Math.abs(z) < 0) z = motion.z;
-		if (motion.z < 0 && motion.z + Math.abs(z) > 0) z = motion.z;
-		this.setDeltaMovement(this.getDeltaMovement().add(new Vec3(-x, 0.0D, -z)));
+		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
+	}
+
+	private void resistanceAboveWater() { // TODO 实际数值根据进水体积决定
+		Vec3d airRes = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
+		this.deltaPitch *= 0.9D;
+		this.deltaYaw *= 0.9D;
+		this.deltaRoll *= 0.9D;
 	}
 
 	private void tickLerp() {
@@ -316,9 +302,9 @@ public class TestPlaneEntity extends Entity {
 			double d0 = this.getX() + (this.lerpX - this.getX()) / (double) this.lerpSteps;
 			double d1 = this.getY() + (this.lerpY - this.getY()) / (double) this.lerpSteps;
 			double d2 = this.getZ() + (this.lerpZ - this.getZ()) / (double) this.lerpSteps;
-			double d3 = Mth.wrapDegrees(this.lerpYRot - (double) this.getYRot());
+			double d3 = Mth.wrapDegrees(this.lerpYaw - (double) this.getYRot());
 			this.setYRot(this.getYRot() + (float) d3 / (float) this.lerpSteps);
-			this.setXRot(this.getXRot() + (float) (this.lerpXRot - (double) this.getXRot()) / (float) this.lerpSteps);
+			this.setXRot(this.getXRot() + (float) (this.lerpPitch - (double) this.getXRot()) / (float) this.lerpSteps);
 			--this.lerpSteps;
 			this.setPos(d0, d1, d2);
 			this.setRot(this.getYRot(), this.getXRot());
@@ -326,17 +312,17 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	private void flyInAir() {
-		float gravity = 0.08F;
 		Vec3 motion = this.getDeltaMovement();
 		if (motion.y > -0.5D) {
 			this.fallDistance = 1.0F;
 		}
 
 		Vec3 lookAngle = this.getLookAngle(); // 实体朝向的向量
+		double gravity = 0.08D;
 		double lookDistance = lookAngle.horizontalDistance(); // 实体朝向水平长度
 		double motionDistance = motion.horizontalDistance(); // 实体运动水平速度
 		double lookLength = lookAngle.length(); // 实体朝向长度
-		double cosXRot = Math.cos(this.getXRotRad()); // ?
+		double cosXRot = Math.cos(-this.getXRotRad()); // ?
 		cosXRot = cosXRot * cosXRot * Math.min(1.0D, lookLength / 0.4D);
 		motion = this.getDeltaMovement().add(0.0D, gravity * (-1.0D + cosXRot * 0.75D), 0.0D);
 		if (motion.y < 0.0D && lookDistance > 0.0D) {
@@ -344,14 +330,22 @@ public class TestPlaneEntity extends Entity {
 			motion = motion.add(lookAngle.x * d6 / lookDistance, d6, lookAngle.z * d6 / lookDistance);
 		}
 
-		if (this.getXRotRad() < 0.0F && lookDistance > 0.0D) {
-			double d10 = motionDistance * -Math.sin(this.getXRotRad()) * 0.04D;
+		if (-this.getXRotRad() < 0.0F && lookDistance > 0.0D) {
+			double d10 = motionDistance * -Math.sin(-this.getXRotRad()) * 0.04D;
 			motion = motion.add(-lookAngle.x * d10 / lookDistance, d10 * 3.2D, -lookAngle.z * d10 / lookDistance);
 		}
 
 		if (lookDistance > 0.0D) {
 			motion = motion.add((lookAngle.x / lookDistance * motionDistance - motion.x) * 0.1D, 0.0D, (lookAngle.z / lookDistance * motionDistance - motion.z) * 0.1D);
 		}
+
+		double lift = this.getLookSpeed() >= 1.5 ? 0.02D : 0.008888888888888888D * this.getDeltaMovement().horizontalDistanceSqr();
+		if (this.inputClimbUp) {
+			lift *= 2;
+		} else if (this.inputDecline) {
+			lift *= -2;
+		}
+		motion = motion.add(new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad()));
 
 		this.setDeltaMovement(motion.multiply(0.99D, 0.98D, 0.99D));
 		this.move(MoverType.SELF, this.getDeltaMovement());
@@ -368,7 +362,18 @@ public class TestPlaneEntity extends Entity {
 
 	private void controlInAir() {
 		if (this.level.isClientSide) {
+			double speedRatio = this.getLookSpeed() / 100.0D; // 当前速度与最快速度的比值
+			if (this.inputLookUp) this.deltaPitch -= speedRatio * 5.0D; // MC中，仰视则pitch为负，故用减法
+			if (this.inputLookDown) this.deltaPitch += speedRatio * 5.0D;
+			if (this.inputLeftRoll) ;// TODO
+			if (this.inputRightRoll) ;// TODO
+			if (this.inputLeft) this.deltaYaw -= speedRatio * 5.0D;
+			if (this.inputRight) this.deltaYaw += speedRatio * 5.0D;
 		}
+	}
+
+	private void resRotate() {
+		// TODO
 	}
 
 	public void setControlState(boolean speedUp, boolean left, boolean right) {
@@ -387,7 +392,7 @@ public class TestPlaneEntity extends Entity {
 			if (this.getEngineState()) {
 				this.setEngineState(false);
 			} else {
-//				if (this.entityData.get(FUEL) > 0) {
+//				if (this.entityData.get(FUEL) > 0) { TODO
 				if (!this.getTractor()) this.setEngineState(true);
 //				}
 			}
@@ -448,6 +453,10 @@ public class TestPlaneEntity extends Entity {
 
 	public void setEnginePower(int power) {
 		this.entityData.set(ENGINE_POWER, power);
+	}
+
+	public double getLookSpeed() {
+		return VecHelper.projectionLength(this.getDeltaMovement(), this.getLookAngle());
 	}
 
 	public boolean getSpeedUp() {
@@ -657,7 +666,7 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	public double getXRotRad() {
-		return Math.toRadians(this.getXRot());
+		return Math.toRadians(-this.getXRot());
 	}
 
 	public double getYRotRad() {
@@ -703,7 +712,7 @@ public class TestPlaneEntity extends Entity {
 		} else if (player.getItemInHand(hand).is(ItemList.TRACTOR.get()) && this.status == Status.STAND_ON_GROUND && !this.getTractor() && !this.getEngineState()) {
 			if (this.getControllingPassenger() == null && !this.level.isClientSide) {
 				this.setTractor(true);
-				if (!player.isCreative()) player.getItemInHand(hand).shrink(1);
+				if (!player.getAbilities().instabuild) player.getItemInHand(hand).shrink(1);
 				return InteractionResult.CONSUME;
 			}
 			return InteractionResult.PASS;
