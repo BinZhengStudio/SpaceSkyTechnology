@@ -4,13 +4,10 @@ import cn.bzgzs.spaceplane.SpacePlane;
 import cn.bzgzs.spaceplane.client.model.TestPlaneModel;
 import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -38,9 +35,11 @@ public class TestPlaneRenderer extends EntityRenderer<TestPlaneEntity> implement
 	@Override
 	public void render(TestPlaneEntity entity, float entityYaw, float partialTicks, PoseStack matrixStack, MultiBufferSource buffer, int packedLight) {
 		super.render(entity, entityYaw, partialTicks, matrixStack, buffer, packedLight);
-		VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
 		matrixStack.pushPose();
-		this.getModel().renderToBuffer(matrixStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F,1.0F,1.0F);
+		this.getModel().setupAnim(entity, 45.0F,0.0F,-0.1F,45.0F, 0.0F);
+		// TODO ????
+//		VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+//		this.getModel().renderToBuffer(matrixStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F,1.0F,1.0F);
 		matrixStack.popPose();
 	}
 }

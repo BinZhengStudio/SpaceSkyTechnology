@@ -3,8 +3,10 @@ package cn.bzgzs.spaceplane.client.event;
 import cn.bzgzs.spaceplane.client.gui.PlaneGui;
 import cn.bzgzs.spaceplane.client.player.KeyboardInputList;
 import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityViewRenderEvent;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -43,6 +45,19 @@ public class ClientEventHandler {
 			if (event.getType() == RenderGameOverlayEvent.ElementType.ALL) {
 				if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
 					new PlaneGui(event.getMatrixStack(), plane).render();
+				}
+			}
+		}
+	}
+
+	@SubscribeEvent
+	public static void cameraSetup(EntityViewRenderEvent.CameraSetup event) {
+		if (Minecraft.getInstance().player != null) {
+			if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
+				if (Minecraft.getInstance().options.getCameraType() == CameraType.FIRST_PERSON) {
+					event.setRoll(plane.getZRot());
+					System.out.println(event.getPitch());
+					event.setPitch(Minecraft.getInstance().player.getXRot() + plane.getXRot());
 				}
 			}
 		}

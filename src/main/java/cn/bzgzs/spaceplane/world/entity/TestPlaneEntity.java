@@ -212,12 +212,13 @@ public class TestPlaneEntity extends Entity {
 				}
 				case IN_AIR -> {
 					this.flyInAir();
-//					this.controlInAir();
+					this.controlInAir();
+					this.inAirResistance();
 				}
 				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
 			}
 			if (this.level.isClientSide && this.getEngineState()) {
-				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).yRot(this.getYRotRad())));
+				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
 			}
 			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO 需要覆写
 		} else {
@@ -278,12 +279,18 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	private void resistanceStandOnGround() {
+		this.deltaPitch *= 0.9F;
+		this.deltaYaw *= 0.9F;
+		this.deltaRoll *= 0.9F;
 		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 0.23D : 0.2D).yRot(this.getYRotRad());
-		Vec3d airRes = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
-		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res.add(airRes))));
+		Vec3d airLift = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res.add(airLift))));
 	}
 
 	private void resistanceLieOnGround() {
+		this.deltaPitch *= 0.6F;
+		this.deltaYaw *= 0.6F;
+		this.deltaRoll *= 0.6F;
 		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 1.1D : 1.0D).yRot(this.getYRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
@@ -327,18 +334,18 @@ public class TestPlaneEntity extends Entity {
 		double cosXRot = Math.cos(-this.getXRotRad());
 		double cosXRotSqr = cosXRot * cosXRot;
 		double gravity = 0.08D * (-1.0D + cosXRotSqr * 0.75D);
-		motion = this.getDeltaMovement().add(0.0D, gravity, 0.0D);
-		if (motion.y < 0.0D && lookDistance > 0.0D) {
+		motion = this.getDeltaMovement().add(0.0D, gravity, 0.0D); // 下落处理
+		if (motion.y < 0.0D && lookDistance > 0.0D) { // 下落时的水平方向加速
 			double d6 = motion.y * -0.1D * cosXRotSqr;
 			motion = motion.add(lookAngle.x * d6 / lookDistance, d6, lookAngle.z * d6 / lookDistance);
 		}
 
-		if (-this.getXRotRad() < 0.0F && lookDistance > 0.0D) {
+		if (-this.getXRotRad() < 0.0F && lookDistance > 0.0D) { // 头朝斜上方的水平方向减速和斜向上加速
 			double d10 = motionDistance * -Math.sin(-this.getXRotRad()) * 0.04D;
 			motion = motion.add(-lookAngle.x * d10 / lookDistance, d10 * 3.2D, -lookAngle.z * d10 / lookDistance);
 		}
 
-		if (lookDistance > 0.0D) {
+		if (lookDistance > 0.0D) { // ?
 			motion = motion.add((lookAngle.x / lookDistance * motionDistance - motion.x) * 0.1D, 0.0D, (lookAngle.z / lookDistance * motionDistance - motion.z) * 0.1D);
 		}
 
@@ -351,7 +358,8 @@ public class TestPlaneEntity extends Entity {
 		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad());
 		motion = motion.add(liftVec);
 
-		this.setDeltaMovement(motion.multiply(0.99D, 0.98D, 0.99D));
+		this.setRot(this.getXRot() + this.deltaPitch, this.getYRot() + this.deltaYaw, this.getZRot() + this.deltaRoll);
+		this.setDeltaMovement(motion);
 		this.move(MoverType.SELF, this.getDeltaMovement());
 		if (this.horizontalCollision && !this.level.isClientSide) {
 			double d11 = this.getDeltaMovement().horizontalDistance();
@@ -366,18 +374,26 @@ public class TestPlaneEntity extends Entity {
 
 	private void controlInAir() {
 		if (this.level.isClientSide) {
-			double speedRatio = this.getLookSpeed() / 100.0D; // 当前速度与最快速度的比值
+			double speedRatio = this.getLookSpeed() / 20.0D; // 当前速度与最快速度的比值
 			if (this.inputLookUp) this.deltaPitch -= speedRatio * 5.0D; // MC中，仰视则pitch为负，故用减法
 			if (this.inputLookDown) this.deltaPitch += speedRatio * 5.0D;
-			if (this.inputLeftRoll) ;// TODO
-			if (this.inputRightRoll) ;// TODO
+			if (this.inputLeftRoll) this.deltaRoll -= speedRatio * 5.0D;
+			if (this.inputRightRoll) this.deltaRoll += speedRatio * 5.0D;
 			if (this.inputLeft) this.deltaYaw -= speedRatio * 5.0D;
 			if (this.inputRight) this.deltaYaw += speedRatio * 5.0D;
 		}
 	}
 
-	private void resRotate() {
-		// TODO
+	private void inAirResistance() {
+		this.deltaPitch *= 0.9F;
+		this.deltaYaw *= 0.9F;
+		this.deltaRoll *= 0.9F;
+//		this.deltaPitch -= Math.min(this.deltaPitch, 1.0D);
+//		this.deltaYaw -= Math.min(this.deltaYaw, 1.0D);
+//		this.deltaRoll -= Math.min(this.deltaRoll, 1.0D);
+
+		Vec3d res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
 	public void setControlState(boolean speedUp, boolean left, boolean right) {
@@ -457,6 +473,10 @@ public class TestPlaneEntity extends Entity {
 
 	public void setEnginePower(int power) {
 		this.entityData.set(ENGINE_POWER, power);
+	}
+
+	public double getLookSpeedSqr() {
+		return VecHelper.projectionLengthSqr(this.getDeltaMovement(), this.getLookAngle());
 	}
 
 	public double getLookSpeed() {
@@ -649,10 +669,10 @@ public class TestPlaneEntity extends Entity {
 
 	protected void clampRotation(Entity entityToUpdate) {
 		entityToUpdate.setYBodyRot(this.getYRot());
-		float f = Mth.wrapDegrees(entityToUpdate.getYRot() - this.getYRot());
-		float f1 = Mth.clamp(f, -105.0F, 105.0F);
-		entityToUpdate.yRotO += f1 - f;
-		entityToUpdate.setYRot(entityToUpdate.getYRot() + f1 - f);
+		float yaw = Mth.wrapDegrees(entityToUpdate.getYRot() - this.getYRot());
+		float yaw1 = Mth.clamp(yaw, -105.0F, 105.0F);
+		entityToUpdate.yRotO += yaw1 - yaw;
+		entityToUpdate.setYRot(entityToUpdate.getYRot() + yaw1 - yaw);
 		entityToUpdate.setYHeadRot(entityToUpdate.getYRot());
 	}
 
@@ -693,12 +713,24 @@ public class TestPlaneEntity extends Entity {
 		}
 	}
 
+	protected void setRot(float pitch, float yaw, float roll) {
+		this.setRot(pitch, yaw);
+		this.setZRot(Mth.wrapDegrees(roll));
+	}
+
+	@Override
+	protected void setRot(float pitch, float yaw) {
+		this.setXRot(Mth.wrapDegrees(pitch));
+		this.setYRot(Mth.wrapDegrees(yaw));
+	}
+
 	@Override
 	protected void readAdditionalSaveData(CompoundTag tag) {
 		this.setEngineState(tag.getBoolean("EngineState"));
 		this.setLandingGear(tag.getBoolean("LandingGear"));
 		this.setTractor(tag.getBoolean("Tractor"));
 		this.setEnginePower(tag.getInt("EnginePower"));
+		this.setZRot(tag.getFloat("ZRot"));
 	}
 
 	@Override
@@ -707,6 +739,7 @@ public class TestPlaneEntity extends Entity {
 		tag.putBoolean("LandingGear", this.getLandingGear());
 		tag.putBoolean("Tractor", this.getTractor());
 		tag.putInt("EnginePower", this.getEnginePower());
+		tag.putFloat("ZRot", this.getZRot());
 	}
 
 	@Override
