@@ -1,6 +1,6 @@
 {
   "parent": "item/handheld",
   "textures": {
-    "layer0": "spaceplane:item/nickel_pickaxe"
+    "layer0": "spaceplane:item/nickel_shovel"
   }
 }
