@@ -274,8 +274,7 @@ public class TestPlaneEntity extends Entity {
 		} else if (this.inputDecline) {
 			lift *= -2;
 		}
-		Vec3 motion = this.getDeltaMovement();
-		this.setDeltaMovement(new Vec3(motion.x, lift - gravity, motion.z));
+		this.setDeltaMovement(this.getDeltaMovement().add(0.0D, lift - gravity, 0.0D));
 	}
 
 	private void resistanceStandOnGround() {
