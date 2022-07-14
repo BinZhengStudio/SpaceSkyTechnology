@@ -37,7 +37,6 @@ public class TestPlaneRenderer extends EntityRenderer<TestPlaneEntity> implement
 		super.render(entity, entityYaw, partialTicks, matrixStack, buffer, packedLight);
 		matrixStack.pushPose();
 		this.getModel().setupAnim(entity, 45.0F,0.0F,-0.1F,45.0F, 0.0F);
-		// TODO ????
 //		VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
 //		this.getModel().renderToBuffer(matrixStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F,1.0F,1.0F);
 		matrixStack.popPose();

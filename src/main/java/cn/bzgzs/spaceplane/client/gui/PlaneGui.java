@@ -19,6 +19,9 @@ public class PlaneGui extends GuiComponent {
 	private final boolean landingGear;
 	private final boolean tractor;
 	private final int power;
+	private final float pitch;
+	private final float yaw;
+	private final float roll;
 
 	public PlaneGui(PoseStack poseStack, TestPlaneEntity plane) {
 		this.minecraft = Minecraft.getInstance();
@@ -28,6 +31,9 @@ public class PlaneGui extends GuiComponent {
 		this.landingGear = plane.getLandingGear();
 		this.tractor = plane.getTractor();
 		this.power = plane.getEnginePower();
+		this.pitch = plane.getXRot();
+		this.yaw = plane.getYRot();
+		this.roll = plane.getZRot();
 	}
 
 	public void render() {
@@ -37,5 +43,8 @@ public class PlaneGui extends GuiComponent {
 		this.font.draw(this.poseStack, this.landingGear ? "YES" : "NO", 0,15,0x00FF00);
 		this.font.draw(this.poseStack, this.tractor ? "YES" : "NO", 0,30,0x0000FF);
 		this.font.draw(this.poseStack, Integer.toString(this.power), 0,45,0xFFFF00);
+		this.font.draw(this.poseStack, Float.toString(this.pitch), 0,60,0xFFFF00);
+		this.font.draw(this.poseStack, Float.toString(this.yaw), 0,66,0xFFFF00);
+		this.font.draw(this.poseStack, Float.toString(this.roll), 0,72,0xFFFF00);
 	}
 }

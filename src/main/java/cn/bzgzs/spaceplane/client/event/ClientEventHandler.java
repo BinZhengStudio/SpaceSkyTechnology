@@ -56,7 +56,6 @@ public class ClientEventHandler {
 			if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
 				if (Minecraft.getInstance().options.getCameraType() == CameraType.FIRST_PERSON) {
 					event.setRoll(plane.getZRot());
-					System.out.println(event.getPitch());
 					event.setPitch(Minecraft.getInstance().player.getXRot() + plane.getXRot());
 				}
 			}
