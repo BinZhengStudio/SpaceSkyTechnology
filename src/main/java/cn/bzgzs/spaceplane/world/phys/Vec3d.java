@@ -5,12 +5,21 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 public class Vec3d extends Vec3 {
-	public Vec3d(double pX, double pY, double pZ) {
-		super(pX, pY, pZ);
+	public Vec3d(double x, double y, double z) {
+		super(x, y, z);
 	}
 
 	public Vec3d(Vector3f pFloatVector) {
 		super(pFloatVector);
+	}
+
+	@Override
+	public Vec3d add(Vec3 vec) {
+		return this.add(vec.x, vec.y, vec.z);
+	}
+
+	public Vec3d add(double x, double y, double z) {
+		return new Vec3d(this.x + x, this.y + y, this.z + z);
 	}
 
 	@Override

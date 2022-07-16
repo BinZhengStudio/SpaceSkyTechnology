@@ -91,7 +91,7 @@ public class TestPlaneEntity extends Entity {
 
 	@Override
 	protected float getEyeHeight(Pose pose, EntityDimensions size) {
-		return size.height;
+		return 3.5F;
 	}
 
 	@Override
@@ -135,9 +135,13 @@ public class TestPlaneEntity extends Entity {
 		return LivingEntity.resetForwardDirectionOfRelativePortalPosition(super.getRelativePortalPosition(pAxis, pPortal));
 	}
 
+	protected double getHorizontalRidingOffset() {
+		return 2.0D;
+	}
+
 	@Override
 	public double getPassengersRidingOffset() {
-		return -0.1D;
+		return -0.81D;
 	}
 
 	@Override
@@ -218,7 +222,7 @@ public class TestPlaneEntity extends Entity {
 				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
 			}
 			if (this.level.isClientSide && this.getEngineState()) {
-				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
+				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad())));
 			}
 			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO 需要覆写
 		} else {
@@ -355,7 +359,7 @@ public class TestPlaneEntity extends Entity {
 		} else if (this.inputDecline) {
 			lift *= -2;
 		}
-		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad());
+		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad());
 		motion = motion.add(liftVec);
 
 		this.setRot(this.getXRot() + this.deltaPitch, this.getYRot() + this.deltaYaw, this.getZRot() + this.deltaRoll);
@@ -375,12 +379,12 @@ public class TestPlaneEntity extends Entity {
 				this.deltaYaw -= deltaRotate * Math.sin(this.getZRotRad());
 			}
 			if (this.inputLeftRoll) {
-				this.deltaYaw += deltaRotate * Math.sin(this.getXRotRad());
-				this.deltaRoll -= deltaRotate * Math.cos(this.getXRotRad());
+				this.deltaYaw += deltaRotate * Math.abs(Math.sin(this.getXRotRad()));
+				this.deltaRoll -= deltaRotate * Math.abs(Math.cos(this.getXRotRad()));
 			}
 			if (this.inputRightRoll) {
-				this.deltaYaw -= deltaRotate * Math.sin(this.getXRotRad());
-				this.deltaRoll += deltaRotate * Math.cos(this.getXRotRad());
+				this.deltaYaw -= deltaRotate * Math.abs(Math.sin(this.getXRotRad()));
+				this.deltaRoll += deltaRotate * Math.abs(Math.cos(this.getXRotRad()));
 			}
 			if (this.inputLeft) {
 				this.deltaPitch -= deltaRotate * Math.cos(this.getXRotRad()) * Math.sin(this.getZRotRad());
@@ -400,7 +404,7 @@ public class TestPlaneEntity extends Entity {
 		this.deltaYaw *= 0.9F;
 		this.deltaRoll *= 0.9F;
 
-		Vec3d res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
+		Vec3d res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
@@ -671,8 +675,8 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	private Vec3 calculateRiderOffset() {
-		double yaw = -Math.toRadians(this.getYRot()); // 转换为弧度制
-		return new Vec3(0, 0, 2).add(0, this.getEyeHeight(), 0).yRot((float) yaw);
+		return new Vec3(0.0D, this.getEyeHeight() + this.getPassengersRidingOffset(), 0.0D)
+				.add(new Vec3d(0.0D, 0.0D, this.getHorizontalRidingOffset()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad()));
 	}
 
 	protected void clampRotation(Entity entityToUpdate) {
@@ -722,24 +726,14 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	protected void setRot(float pitch, float yaw, float roll) {
-//		if (pitch < -90.0F) { // TODO 错误算法
-//			pitch = 180.0F - pitch;
-//			yaw += 180.0F;
-//			roll += 180.0F;
-//		}
-//		if (pitch > 90.0F) {
-//			pitch = 180.0F - pitch;
-//			yaw += 180.0F;
-//			roll += 180.0F;
-//		}
-		this.setXRot(Mth.wrapDegrees(pitch));
-		this.setYRot(Mth.wrapDegrees(yaw));
+		this.setRot(yaw, pitch);
 		this.setZRot(Mth.wrapDegrees(roll));
 	}
 
 	@Override
 	protected void setRot(float yaw, float pitch) {
-		this.setRot(pitch, yaw, this.getZRot());
+		this.setXRot(Mth.wrapDegrees(pitch));
+		this.setYRot(Mth.wrapDegrees(yaw));
 	}
 
 	@Override

@@ -4,10 +4,15 @@ import cn.bzgzs.spaceplane.SpacePlane;
 import cn.bzgzs.spaceplane.client.model.TestPlaneModel;
 import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Quaternion;
+import com.mojang.math.Vector3f;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -36,9 +41,18 @@ public class TestPlaneRenderer extends EntityRenderer<TestPlaneEntity> implement
 	public void render(TestPlaneEntity entity, float entityYaw, float partialTicks, PoseStack matrixStack, MultiBufferSource buffer, int packedLight) {
 		super.render(entity, entityYaw, partialTicks, matrixStack, buffer, packedLight);
 		matrixStack.pushPose();
-		this.getModel().setupAnim(entity, 45.0F,0.0F,-0.1F,45.0F, 0.0F);
-//		VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
-//		this.getModel().renderToBuffer(matrixStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F,1.0F,1.0F);
+
+		VertexConsumer cutoutNoCull = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+		VertexConsumer translucentCull = buffer.getBuffer(RenderType.entityTranslucentCull(TEXTURE));
+//		this.getModel().renderToBuffer(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F,1.0F,1.0F);
+		matrixStack.translate(0.0D, 3.5D, 0.0D);
+//		matrixStack.mulPose(Quaternion.fromXYZ((float) -entity.getXRotRad(), (float) entity.getYRotRad(), (float) entity.getZRotRad()));
+		matrixStack.mulPose(Vector3f.XP.rotationDegrees(entity.getXRot()));
+		matrixStack.mulPose(Vector3f.YP.rotationDegrees(-entity.getYRot()));
+		matrixStack.mulPose(Vector3f.ZP.rotationDegrees(entity.getZRot()));
+		this.getModel().commonPartRender(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+		this.getModel().cullPartRender(matrixStack, translucentCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+		this.getModel().engineDecorateRender(matrixStack,  cutoutNoCull,  packedLight,  OverlayTexture.NO_OVERLAY,  1.0F, 1.0F, 1.0F, 1.0F);
 		matrixStack.popPose();
 	}
 }

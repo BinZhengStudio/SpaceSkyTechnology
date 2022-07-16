@@ -1,30 +1,47 @@
 package cn.bzgzs.spaceplane.world.entity;
 
+import cn.bzgzs.spaceplane.network.NetworkHandler;
+import cn.bzgzs.spaceplane.network.client.PlaneEnginePacket;
+import cn.bzgzs.spaceplane.network.client.PlaneEnginePowerPacket;
+import cn.bzgzs.spaceplane.network.client.PlaneLandingGearPacket;
+import cn.bzgzs.spaceplane.network.client.PlaneTractorPacket;
 import cn.bzgzs.spaceplane.util.VecHelper;
+import cn.bzgzs.spaceplane.world.item.ItemList;
+import cn.bzgzs.spaceplane.world.phys.Vec3d;
+import net.minecraft.BlockUtil;
+import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AirBlock;
+import net.minecraft.world.level.block.WaterlilyBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 /**
  * 战斗机的抽象类<br>
@@ -32,162 +49,120 @@ import org.jetbrains.annotations.Nullable;
  * 本类中定义所有关于角度的变量，均采用弧度制
  */
 public abstract class BasePlaneEntity extends Entity {
-	// 发动机输出大小
-	protected static final EntityDataAccessor<Float> POWER = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	// 各轴方向上的速度，以下变量中的X、Y、Z轴，均为战机坐标系中的X、Y、Z轴
-	protected static final EntityDataAccessor<Float> X_SPEED = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> Y_SPEED = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> Z_SPEED = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	// 各轴方向上的加速度
-	protected static final EntityDataAccessor<Float> ACCEL_X = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> ACCEL_Y = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> ACCEL_Z = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	// 爬升和下降的速度
-	protected static final EntityDataAccessor<Float> CLIMB_AND_DECLINE_SPEED = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	// 各轴的旋转方向，代表X、Y、Z轴，均采用弧度制
-	protected static final EntityDataAccessor<Float> PITCH = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> YAW = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> ROLL = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	// 各轴的旋转速度，分别代表X、Y、Z轴
-	protected static final EntityDataAccessor<Float> PITCH_SPEED = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> YAW_SPEED = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> ROLL_SPEED = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	// 各轴的旋转加速度
-	protected static final EntityDataAccessor<Float> PITCH_ACCEL = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> YAW_ACCEL = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	protected static final EntityDataAccessor<Float> ROLL_ACCEL = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.FLOAT);
-	// 引擎是否已经启动
-	protected static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	// 引擎是否正在加速
-	protected static final EntityDataAccessor<Boolean> ENGINE_START = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	// 是否抛副油箱
-	protected static final EntityDataAccessor<Boolean> AUXILIARY_TANK = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	// 起落架是否放下
-	protected static final EntityDataAccessor<Boolean> LANDING_GEAR = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	// 爬升与下降
-	protected static final EntityDataAccessor<Boolean> CLIMBING_UP = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	protected static final EntityDataAccessor<Boolean> DECLINING = SynchedEntityData.defineId(BasePlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> SPEED_UP = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> LEFT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> RIGHT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> LANDING_GEAR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> TRACTOR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> ENGINE_POWER = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
+	public static final int LANDING_GEAR_HEIGHT = 2;
+	private float outOfControlTicks;
+	private float zRot;
+	private float deltaPitch;
+	private float deltaYaw;
+	private float deltaRoll;
+	private int lerpSteps;
+	private double lerpX;
+	private double lerpY;
+	private double lerpZ;
+	private double lerpPitch;
+	private double lerpYaw;
+	private double lerpRoll;
+	private boolean inputEngineOnActivation;
+	private boolean inputLandingGearActivation;
+	private boolean inputLookUp;
+	private boolean inputLookDown;
+	private boolean inputLeftRoll;
+	private boolean inputRightRoll;
+	private boolean inputClimbUp;
+	private boolean inputDecline;
+	private boolean inputLeft;
+	private boolean inputRight;
+	private boolean inputSpeedUp;
+	private boolean inputLaunchMissile;
+	private boolean inputInterceptorMissile;
+	private boolean inputLaunchCannonball;
+	private TestPlaneEntity.Status status;
+	private TestPlaneEntity.Status oldStatus;
 
-	protected static final float GRAVITY_ACCEL = 0.1F;
-
-	public BasePlaneEntity(EntityType<?> type, Level level) {
-		super(type, level);
+	public BasePlaneEntity(EntityType<?> type, Level world) {
+		super(type, world);
 	}
 
-	@Override
-	protected void defineSynchedData() { // 用于客户端与服务端同步数据
-		this.entityData.define(POWER, 0.0F); // 油门
-		this.entityData.define(X_SPEED, 0.0F); // X轴速度
-		this.entityData.define(Y_SPEED, 0.0F); // Y轴速度
-		this.entityData.define(Z_SPEED, 0.0F); // Z轴速度
-		this.entityData.define(ACCEL_X, 0.0F); // X轴加速度
-		this.entityData.define(ACCEL_Y, 0.0F); // Y轴加速度
-		this.entityData.define(ACCEL_Z, 0.0F); // Z轴加速度
-		this.entityData.define(CLIMB_AND_DECLINE_SPEED, 0.0F); // 爬升和下降速度
-		this.entityData.define(PITCH, 0.0F); // X轴旋转
-		this.entityData.define(YAW, 0.0F); // Y轴旋转
-		this.entityData.define(ROLL, 0.0F); // Z轴旋转
-		this.entityData.define(YAW_SPEED, 0.0F); // X轴旋转速度
-		this.entityData.define(PITCH_SPEED, 0.0F); // Y轴旋转速度
-		this.entityData.define(ROLL_SPEED, 0.0F); // Z轴旋转速度
-		this.entityData.define(YAW_ACCEL, 0.0F); // X轴旋转加速度
-		this.entityData.define(PITCH_ACCEL, 0.0F); // Y轴旋转加速度
-		this.entityData.define(ROLL_ACCEL, 0.0F); // Z轴旋转加速度
-		this.entityData.define(ENGINE_ON, false); // 引擎是否已经启动
-		this.entityData.define(ENGINE_START, false); // 引擎是否正在加速
-		this.entityData.define(AUXILIARY_TANK, false); // 是否抛副油箱
-		this.entityData.define(LANDING_GEAR, true); // 起落架是否放下
-		this.entityData.define(CLIMBING_UP, false); // 是否爬升
-		this.entityData.define(DECLINING, false); // 是否下降
-	}
+//	public TestPlaneEntity(Level world, double x, double y, double z) {
+//		this(EntityTypeList.TEST.get(), world);
+//		this.setPos(x, y, z);
+//		this.xo = x;
+//		this.yo = y;
+//		this.zo = z;
+//	}
 
-	@Override
-	protected MovementEmission getMovementEmission() {
-		return MovementEmission.SOUNDS;
-	}
-
-	/**
-	 * 因为Minecraft原版的实体Y坐标是按照实体底部的Y坐标来计算的，如果直接用getY()获取的Y坐标进行绕Z轴旋转的操作，会出现bug。<br>
-	 * 原版的这个方法是用来设置生物的眼睛高度，我们同时用于设置Y偏移。
-	 *
-	 * @param pose 没用的参数
-	 * @param size 没用的参数
-	 * @return Y轴偏移
-	 */
 	@Override
 	protected abstract float getEyeHeight(Pose pose, EntityDimensions size);
 
-	/**
-	 * 获取飞行员的骑乘位置偏移，以战机坐标系为基准
-	 *
-	 * @return 骑乘位置偏移
-	 */
-	public abstract Vec3 getRiderOffset();
+	@Override
+	protected Entity.MovementEmission getMovementEmission() {
+		return Entity.MovementEmission.NONE;
+	}
 
-	/**
-	 * 获取发动机的最大功率。<br>
-	 * 也就是发动机提供的最大加速度。
-	 *
-	 * @return 最大功率
-	 */
-	public abstract float getMaxPower();
+	@Override
+	protected void defineSynchedData() {
+		this.entityData.define(ENGINE_ON, false);
+		this.entityData.define(SPEED_UP, false);
+		this.entityData.define(LEFT, false);
+		this.entityData.define(RIGHT, false);
+		this.entityData.define(LANDING_GEAR, true);
+		this.entityData.define(TRACTOR, false);
+		this.entityData.define(FUEL, 0); // 燃油量，单位mB
+		this.entityData.define(ENGINE_POWER, 0);
+	}
 
-	public abstract float getPowerAccel();
+	@Override
+	public boolean canCollideWith(Entity entity) {
+		return canVehicleCollide(this, entity);
+	}
 
-	/**
-	 * 获取飞机旋转的加速度，与飞机的机动性能相关。<br>
-	 * 单位：rad/(tick*tick)。
-	 *
-	 * @return 旋转加速度
-	 */
-	public abstract float getRotateAccel();
+	public static boolean canVehicleCollide(Entity entity, Entity vehicle) {
+		return (vehicle.canBeCollidedWith() || vehicle.isPushable()) && !entity.isPassengerOfSameVehicle(vehicle);
+	}
 
-	/**
-	 * 功能正如其名。
-	 *
-	 * @return 最大旋转速度，单位：rad/tick
-	 */
-	public abstract float getMaxRotateSpeed();
+	@Override
+	public boolean canBeCollidedWith() {
+		return true;
+	}
 
-	/**
-	 * 获取飞机移动的加速度，与飞机的机动性能相关。<br>
-	 * 如需设置飞机在爬升和下降的加速度，请使用{@link #getClimbAndDeclineAccel()}方法。<br>
-	 * 单位：m/(tick*tick)。
-	 *
-	 * @return 移动加速度
-	 */
-	public abstract float getMotionAccel();
+	@Override
+	public boolean isPushable() {
+		return false;
+	}
 
+	@Override
+	protected Vec3 getRelativePortalPosition(Direction.Axis pAxis, BlockUtil.FoundRectangle pPortal) {
+		return LivingEntity.resetForwardDirectionOfRelativePortalPosition(super.getRelativePortalPosition(pAxis, pPortal));
+	}
 
-	/**
-	 * 最大移动速度，单位：m/tick
-	 *
-	 * @return 最大移动速度
-	 */
-	public abstract float getMaxMotionSpeed();
+	protected abstract double getHorizontalRidingOffset();
 
-	/**
-	 * 飞机爬升和下降的加速度，与飞机的机动性能相关。<br>
-	 * 单位：m/(tick*tick)。
-	 *
-	 * @return 爬升和下降加速度
-	 */
-	public abstract float getClimbAndDeclineAccel();
+	@Override
+	public abstract double getPassengersRidingOffset();
 
-	/**
-	 * 最大爬升和下降速度，单位：m/tick
-	 *
-	 * @return 最大爬升和下降速度
-	 */
-	public abstract float getMaxClimbAndDeclineSpeed();
+	@Override
+	public boolean hurt(DamageSource source, float amount) { // TODO
+		return false;
+	}
 
-	public abstract float getLandingGearHeight();
-
-	public abstract float getResistanceFuncX(float speed);
-
-	public abstract float getResistanceFuncY(float speed);
-
-	public abstract float getResistanceFuncZ(float speed);
+	@Override
+	public void push(Entity entity) { // TODO
+		if (entity instanceof TestPlaneEntity) {
+			if (entity.getBoundingBox().minY < this.getBoundingBox().maxY) {
+				super.push(entity);
+			}
+		} else if (entity.getBoundingBox().minY <= this.getBoundingBox().minY) {
+			super.push(entity);
+		}
+	}
 
 	@Override
 	public boolean isPickable() {
@@ -195,14 +170,507 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	@Override
-	public boolean canBeCollidedWith() {
-		return true; // TODO 以后要自己搞碰撞检测
+	public void lerpTo(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
+		this.lerpX = x;
+		this.lerpY = y;
+		this.lerpZ = z;
+		this.lerpYaw = yaw;
+		this.lerpPitch = pitch;
+		this.lerpSteps = 10;
 	}
 
+	@Override
+	public Direction getMotionDirection() {
+		return this.getDirection().getClockWise();
+	}
+
+	@Override
+	public void tick() {
+		this.oldStatus = this.status;
+		this.status = this.getStatus();
+		if (this.status != TestPlaneEntity.Status.UNDER_WATER) {
+			this.outOfControlTicks = 0.0F;
+		} else {
+			++this.outOfControlTicks;
+		}
+
+		if (!this.level.isClientSide && this.outOfControlTicks >= 60.0F) {
+			this.ejectPassengers();
+		}
+
+		super.tick();
+		this.tickLerp();
+		if (this.isControlledByLocalInstance()) {
+			switch (this.status) {
+				case STAND_ON_GROUND -> {
+					if (this.getTractor()) {
+						this.controlTractor();
+					} else {
+						this.liftStandOnGround();
+						this.resistanceStandOnGround();
+					}
+				}
+				case LIE_ON_GROUND -> {
+					this.liftStandOnGround();
+					this.resistanceLieOnGround();
+				}
+				case ABOVE_WATER -> {
+					this.liftStandOnGround();
+					this.resistanceAboveWater();
+				}
+				case IN_AIR -> {
+					this.flyInAir();
+					this.controlInAir();
+					this.inAirResistance();
+				}
+				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
+			}
+			if (this.level.isClientSide && this.getEngineState()) {
+				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
+			}
+			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO 需要覆写
+		} else {
+			this.setDeltaMovement(Vec3.ZERO);
+		}
+
+		if (this.level.isClientSide) {
+			if (this.getEngineState() && this.inputSpeedUp) {
+				if (this.getEnginePower() < 100) {
+					this.setEnginePower(Math.min(100, this.getEnginePower() + 2));
+					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this.getEnginePower()));
+				}
+			} else {
+				if (this.getEnginePower() > 0) {
+					this.setEnginePower(Math.max(this.getEnginePower() - 5, 0));
+					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this.getEnginePower()));
+				}
+			}
+			// TODO
+//			NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(this.getSpeedUp(), this.getLeft(), this.getRight()));
+		}
+
+		this.checkInsideBlocks(); // TODO 以后要覆写的
+		// 推动实体。TODO 以后要重写
+		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
+		if (!list.isEmpty()) {
+			for (Entity entity : list) {
+				if (!entity.hasPassenger(this)) {
+					this.push(entity);
+				}
+			}
+		}
+	}
+
+	private void controlTractor() {
+		if (this.level.isClientSide) {
+			if (this.inputSpeedUp) {
+				this.move(MoverType.SELF, new Vec3d(0.0D, 0.0D, 0.35D).yRot(this.getYRotRad()));
+			}
+			if (this.inputLeft) {
+				this.setYRot(this.getYRot() - 2);
+			}
+			if (this.inputRight) {
+				this.setYRot(this.getYRot() + 2);
+			}
+		}
+	}
+
+	private void liftStandOnGround() {
+		float gravity = 0.04F;
+		double lift = 0.017777777777777778D * this.getDeltaMovement().horizontalDistanceSqr();
+		if (this.inputClimbUp) {
+			lift *= 2;
+		} else if (this.inputDecline) {
+			lift *= -2;
+		}
+		this.setDeltaMovement(this.getDeltaMovement().add(0.0D, lift - gravity, 0.0D));
+	}
+
+	private void resistanceStandOnGround() {
+		this.deltaPitch *= 0.9F;
+		this.deltaYaw *= 0.9F;
+		this.deltaRoll *= 0.9F;
+		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 0.23D : 0.2D).yRot(this.getYRotRad());
+		Vec3d airLift = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res.add(airLift))));
+	}
+
+	private void resistanceLieOnGround() {
+		this.deltaPitch *= 0.6F;
+		this.deltaYaw *= 0.6F;
+		this.deltaRoll *= 0.6F;
+		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 1.1D : 1.0D).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
+	}
+
+	private void resistanceAboveWater() { // TODO 实际数值根据进水体积决定
+		Vec3d airRes = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
+		this.deltaPitch *= 0.9D;
+		this.deltaYaw *= 0.9D;
+		this.deltaRoll *= 0.9D;
+	}
+
+	private void tickLerp() {
+		if (this.isControlledByLocalInstance()) {
+			this.lerpSteps = 0;
+			this.setPacketCoordinates(this.getX(), this.getY(), this.getZ());
+		}
+
+		if (this.lerpSteps > 0) {
+			double d0 = this.getX() + (this.lerpX - this.getX()) / (double) this.lerpSteps;
+			double d1 = this.getY() + (this.lerpY - this.getY()) / (double) this.lerpSteps;
+			double d2 = this.getZ() + (this.lerpZ - this.getZ()) / (double) this.lerpSteps;
+			double d3 = Mth.wrapDegrees(this.lerpYaw - (double) this.getYRot());
+			this.setYRot(this.getYRot() + (float) d3 / (float) this.lerpSteps);
+			this.setXRot(this.getXRot() + (float) (this.lerpPitch - (double) this.getXRot()) / (float) this.lerpSteps);
+			--this.lerpSteps;
+			this.setPos(d0, d1, d2);
+			this.setRot(this.getYRot(), this.getXRot());
+		}
+	}
+
+	private void flyInAir() { // TODO 麻了，整个都要重写的
+		Vec3 motion = this.getDeltaMovement();
+		if (motion.y > -0.5D) {
+			this.fallDistance = 1.0F;
+		}
+
+		Vec3 lookAngle = this.getLookAngle(); // 实体朝向的向量
+		double lookDistance = lookAngle.horizontalDistance(); // 实体朝向水平长度
+		double motionDistance = motion.horizontalDistance(); // 实体运动水平速度
+		double cosXRot = Math.cos(-this.getXRotRad());
+		double cosXRotSqr = cosXRot * cosXRot;
+		double gravity = 0.08D * (-1.0D + cosXRotSqr * 0.75D);
+		motion = this.getDeltaMovement().add(0.0D, gravity, 0.0D); // 下落处理
+		if (motion.y < 0.0D && lookDistance > 0.0D) { // 下落时的水平方向加速
+			double d6 = motion.y * -0.1D * cosXRotSqr;
+			motion = motion.add(lookAngle.x * d6 / lookDistance, d6, lookAngle.z * d6 / lookDistance);
+		}
+
+		if (-this.getXRotRad() < 0.0F && lookDistance > 0.0D) { // 头朝斜上方的水平方向减速和斜向上加速
+			double d10 = motionDistance * -Math.sin(-this.getXRotRad()) * 0.04D;
+			motion = motion.add(-lookAngle.x * d10 / lookDistance, d10 * 3.2D, -lookAngle.z * d10 / lookDistance);
+		}
+
+		if (lookDistance > 0.0D) { // ?
+			motion = motion.add((lookAngle.x / lookDistance * motionDistance - motion.x) * 0.1D, 0.0D, (lookAngle.z / lookDistance * motionDistance - motion.z) * 0.1D);
+		}
+
+		double lift = this.getLookSpeed() >= 1.5 ? 0.02D : 0.008888888888888888D * this.getDeltaMovement().horizontalDistanceSqr();
+		if (this.inputClimbUp) {
+			lift *= 2;
+		} else if (this.inputDecline) {
+			lift *= -2;
+		}
+		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad());
+		motion = motion.add(liftVec);
+
+		this.setRot(this.getXRot() + this.deltaPitch, this.getYRot() + this.deltaYaw, this.getZRot() + this.deltaRoll);
+		this.setDeltaMovement(motion);
+	}
+
+	private void controlInAir() {
+		if (this.level.isClientSide) {
+			double speedRatio = this.getLookSpeed() / 20.0D; // 当前速度与最快速度的比值
+			double deltaRotate = speedRatio * 5.0D;
+			if (this.inputLookUp) {
+				this.deltaPitch -= deltaRotate * Math.cos(this.getZRotRad()); // MC中，仰视则pitch为负，故用减法
+				this.deltaYaw += deltaRotate * Math.sin(this.getZRotRad());
+			}
+			if (this.inputLookDown) {
+				this.deltaPitch += deltaRotate * Math.cos(this.getZRotRad());
+				this.deltaYaw -= deltaRotate * Math.sin(this.getZRotRad());
+			}
+			if (this.inputLeftRoll) {
+				this.deltaYaw += deltaRotate * Math.abs(Math.sin(this.getXRotRad()));
+				this.deltaRoll -= deltaRotate * Math.abs(Math.cos(this.getXRotRad()));
+			}
+			if (this.inputRightRoll) {
+				this.deltaYaw -= deltaRotate * Math.abs(Math.sin(this.getXRotRad()));
+				this.deltaRoll += deltaRotate * Math.abs(Math.cos(this.getXRotRad()));
+			}
+			if (this.inputLeft) {
+				this.deltaPitch -= deltaRotate * Math.cos(this.getXRotRad()) * Math.sin(this.getZRotRad());
+				this.deltaYaw -= deltaRotate * Math.cos(this.getXRotRad()) * Math.cos(this.getZRotRad());
+				this.deltaRoll -= deltaRotate * Math.sin(this.getXRotRad());
+			}
+			if (this.inputRight) {
+				this.deltaPitch += deltaRotate * Math.cos(this.getXRotRad()) * Math.sin(this.getZRotRad());
+				this.deltaYaw += deltaRotate * Math.cos(this.getXRotRad()) * Math.cos(this.getZRotRad());
+				this.deltaRoll += deltaRotate * Math.sin(this.getXRotRad());
+			}
+		}
+	}
+
+	private void inAirResistance() {
+		this.deltaPitch *= 0.9F;
+		this.deltaYaw *= 0.9F;
+		this.deltaRoll *= 0.9F;
+
+		Vec3d res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
+		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
+	}
+
+	public void setControlState(boolean speedUp, boolean left, boolean right) {
+		this.setSpeedUp(speedUp);
+		this.setLeft(left);
+		this.setRight(right);
+	}
+
+	public void setInputEngineOnActivation(boolean activation) {
+		if (!activation) this.changeEngineState();
+		this.inputEngineOnActivation = activation;
+	}
+
+	public void changeEngineState() {
+		if (this.inputEngineOnActivation) {
+			if (this.getEngineState()) {
+				this.setEngineState(false);
+			} else {
+//				if (this.entityData.get(FUEL) > 0) { TODO
+				if (!this.getTractor()) this.setEngineState(true);
+//				}
+			}
+			if (this.level.isClientSide) {
+				NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePacket(this.getEngineState()));
+			}
+		}
+	}
+
+	public boolean getEngineState() {
+		return this.entityData.get(ENGINE_ON);
+	}
+
+	public void setEngineState(boolean state) {
+		this.entityData.set(ENGINE_ON, state);
+	}
+
+	public void setInputLandingGearActivation(boolean activation) {
+		if (!activation) this.changeLandingGear();
+		this.inputLandingGearActivation = activation;
+	}
+
+	public void changeLandingGear() {
+		if (this.inputLandingGearActivation) {
+			this.entityData.set(LANDING_GEAR, !this.getLandingGear());
+			if (this.level.isClientSide) {
+				NetworkHandler.INSTANCE.sendToServer(new PlaneLandingGearPacket(this.getLandingGear()));
+			}
+		}
+	}
+
+	public boolean getLandingGear() {
+		return this.entityData.get(LANDING_GEAR);
+	}
+
+	public void setLandingGear(boolean state) {
+		this.entityData.set(LANDING_GEAR, state);
+	}
+
+	public boolean getTractor() {
+		return this.entityData.get(TRACTOR);
+	}
+
+	public void setTractor(boolean state) {
+		if (this.level.isClientSide) {
+			NetworkHandler.INSTANCE.sendToServer(new PlaneTractorPacket(state));
+		} else {
+			if (!state && this.getTractor() && this.getControllingPassenger() instanceof Player player) {
+				player.addItem(new ItemStack(ItemList.TRACTOR.get()));
+			}
+		}
+		this.entityData.set(TRACTOR, state);
+	}
+
+	public int getEnginePower() {
+		return this.entityData.get(ENGINE_POWER);
+	}
+
+	public void setEnginePower(int power) {
+		this.entityData.set(ENGINE_POWER, power);
+	}
+
+	public double getLookSpeedSqr() {
+		return VecHelper.projectionLengthSqr(this.getDeltaMovement(), this.getLookAngle());
+	}
+
+	public double getLookSpeed() {
+		return VecHelper.projectionLength(this.getDeltaMovement(), this.getLookAngle());
+	}
+
+	public boolean getSpeedUp() {
+		return this.entityData.get(SPEED_UP);
+	}
+
+	private void setSpeedUp(boolean speedUp) {
+		this.entityData.set(SPEED_UP, speedUp);
+	}
+
+	public boolean getLeft() {
+		return this.entityData.get(LEFT);
+	}
+
+	private void setLeft(boolean left) {
+		this.entityData.set(LEFT, left);
+	}
+
+	public boolean getRight() {
+		return this.entityData.get(RIGHT);
+	}
+
+	private void setRight(boolean right) {
+		this.entityData.set(RIGHT, right);
+	}
+
+	private TestPlaneEntity.Status getStatus() {
+		if (this.checkUnderWater()) {
+			return TestPlaneEntity.Status.UNDER_WATER;
+		} else if (this.isAboveWater()) {
+			return TestPlaneEntity.Status.ABOVE_WATER;
+		} else {
+			float f = this.getGroundFriction();
+			if (f > 0.0F) {
+				return this.getLandingGear() ? TestPlaneEntity.Status.STAND_ON_GROUND : TestPlaneEntity.Status.LIE_ON_GROUND;
+			} else {
+				return TestPlaneEntity.Status.IN_AIR;
+			}
+		}
+	}
+
+	public float getGroundFriction() {
+		AABB aabb = this.getBoundingBox();
+		AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001D, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
+		int i = Mth.floor(aabb1.minX) - 1;
+		int j = Mth.ceil(aabb1.maxX) + 1;
+		int k = Mth.floor(aabb1.minY) - 1;
+		int l = Mth.ceil(aabb1.maxY) + 1;
+		int i1 = Mth.floor(aabb1.minZ) - 1;
+		int j1 = Mth.ceil(aabb1.maxZ) + 1;
+		VoxelShape voxelshape = Shapes.create(aabb1);
+		float f = 0.0F;
+		int k1 = 0;
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (int l1 = i; l1 < j; ++l1) {
+			for (int i2 = i1; i2 < j1; ++i2) {
+				int j2 = (l1 != i && l1 != j - 1 ? 0 : 1) + (i2 != i1 && i2 != j1 - 1 ? 0 : 1);
+				if (j2 != 2) {
+					for (int k2 = k; k2 < l; ++k2) {
+						if (j2 <= 0 || k2 != k && k2 != l - 1) {
+							pos.set(l1, k2, i2);
+							BlockState blockstate = this.level.getBlockState(pos);
+							if (!(blockstate.getBlock() instanceof WaterlilyBlock) && Shapes.joinIsNotEmpty(blockstate.getCollisionShape(this.level, pos).move(l1, k2, i2), voxelshape, BooleanOp.AND)) {
+								f += blockstate.getFriction(this.level, pos, this);
+								++k1;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return f / (float) k1;
+	}
+
+	public boolean isOnLand() { // TODO 以后要自行编写碰撞检测
+		AABB aabb = this.getBoundingBox();
+		AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001D, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
+		int i = Mth.floor(aabb1.minX) - 1;
+		int j = Mth.ceil(aabb1.maxX) + 1;
+		int k = Mth.floor(aabb1.minY) - 1;
+		int l = Mth.ceil(aabb1.maxY) + 1;
+		int i1 = Mth.floor(aabb1.minZ) - 1;
+		int j1 = Mth.ceil(aabb1.maxZ) + 1;
+		VoxelShape voxelshape = Shapes.create(aabb1);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (int l1 = i; l1 < j; ++l1) {
+			for (int i2 = i1; i2 < j1; ++i2) {
+				int j2 = (l1 != i && l1 != j - 1 ? 0 : 1) + (i2 != i1 && i2 != j1 - 1 ? 0 : 1);
+				if (j2 != 2) {
+					for (int k2 = k; k2 < l; ++k2) {
+						if (j2 <= 0 || k2 != k && k2 != l - 1) {
+							pos.set(l1, k2, i2);
+							BlockState blockstate = this.level.getBlockState(pos);
+							if (!blockstate.isAir() && Shapes.joinIsNotEmpty(blockstate.getCollisionShape(this.level, pos).move(l1, k2, i2), voxelshape, BooleanOp.AND)) {
+								return true;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	private boolean isAboveWater() {
+		AABB aabb = this.getBoundingBox();
+		int i = Mth.floor(aabb.minX);
+		int j = Mth.ceil(aabb.maxX);
+		int k = Mth.floor(aabb.minY);
+		int l = Mth.ceil(aabb.minY + 0.001D);
+		int i1 = Mth.floor(aabb.minZ);
+		int j1 = Mth.ceil(aabb.maxZ);
+		boolean flag = false;
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (int k1 = i; k1 < j; ++k1) {
+			for (int l1 = k; l1 < l; ++l1) {
+				for (int i2 = i1; i2 < j1; ++i2) {
+					pos.set(k1, l1, i2);
+					FluidState fluidstate = this.level.getFluidState(pos);
+					if (fluidstate.is(FluidTags.WATER)) {
+						float f = (float) l1 + fluidstate.getHeight(this.level, pos);
+						flag |= aabb.minY < (double) f;
+					}
+				}
+			}
+		}
+
+		return flag;
+	}
+
+	private boolean checkUnderWater() {
+		AABB aabb = this.getBoundingBox();
+		double d0 = aabb.maxY + 0.001D;
+		int i = Mth.floor(aabb.minX);
+		int j = Mth.ceil(aabb.maxX);
+		int k = Mth.floor(aabb.maxY);
+		int l = Mth.ceil(d0);
+		int i1 = Mth.floor(aabb.minZ);
+		int j1 = Mth.ceil(aabb.maxZ);
+		boolean flag = false;
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (int k1 = i; k1 < j; ++k1) {
+			for (int l1 = k; l1 < l; ++l1) {
+				for (int i2 = i1; i2 < j1; ++i2) {
+					pos.set(k1, l1, i2);
+					FluidState fluidstate = this.level.getFluidState(pos);
+					if (fluidstate.is(FluidTags.WATER) && d0 < (double) ((float) pos.getY() + fluidstate.getHeight(this.level, pos))) {
+						if (!fluidstate.isSource()) {
+							return true;
+						}
+
+						flag = true;
+					}
+				}
+			}
+		}
+
+		return flag;
+	}
+
+	// TODO 临时代码
 	@Override
 	public void positionRider(Entity passenger) {
 		if (this.hasPassenger(passenger)) {
 			passenger.setPos(this.calculateRiderPosition());
+			passenger.setYRot(passenger.getYRot() + this.deltaYaw);
+			passenger.setYHeadRot(passenger.getYHeadRot() + this.deltaYaw);
+			this.clampRotation(passenger);
 		}
 	}
 
@@ -211,227 +679,141 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	private Vec3 calculateRiderOffset() {
-		float pitch = this.entityData.get(PITCH); // TODO 需要转换为相对于世界的坐标系
-		double yaw = -Math.toRadians(this.getYRot()); // 转换为弧度制
-		double roll = Math.toRadians(this.getXRot()); // TODO 需要修改
-		return this.getRiderOffset().add(0, this.getEyeHeight(), 0).xRot(pitch).yRot((float) yaw).zRot((float) roll);
+		return new Vec3(0.0D, this.getEyeHeight() + this.getPassengersRidingOffset(), 0.0D).add(new Vec3d(0.0D, 0.0D, this.getHorizontalRidingOffset()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad()));
 	}
 
-	private Vec3 getClimbAndDeclineAccel(boolean climbing, boolean declining) {
-		float accel = 0.0F;
-		if (climbing) {
-			accel += Math.min(this.getClimbAndDeclineAccel(), this.getMaxClimbAndDeclineSpeed() - this.entityData.get(CLIMB_AND_DECLINE_SPEED));
-		}
-		if (declining) {
-			accel += Math.max(-this.getClimbAndDeclineAccel(), -this.getMaxClimbAndDeclineSpeed() - this.entityData.get(CLIMB_AND_DECLINE_SPEED));
-		}
-		this.entityData.set(CLIMB_AND_DECLINE_SPEED, this.entityData.get(CLIMB_AND_DECLINE_SPEED) + accel);
-		return new Vec3(0, accel, 0);
-	}
-
-	private Vec3 calculateResistance() { // TODO 需要修改
-		Vec3 vec3 = Vec3.ZERO;
-		vec3 = VecHelper.add(vec3, 0, this.getResistanceFuncY(this.entityData.get(Y_SPEED)), -this.getResistanceFuncZ(this.entityData.get(Z_SPEED)));
-		return vec3;
-	}
-
-	private Vec3 calculateAccel() { // TODO 还需要加入其他的速度
-		Vec3 vec3 = Vec3.ZERO;
-		if (!this.isOnGround()) {
-			vec3 = VecHelper.add(vec3, 0, -GRAVITY_ACCEL, 0);
-		}
-		vec3 = VecHelper.add(vec3, 0, 0, this.entityData.get(POWER));
-		vec3 = VecHelper.add(vec3, this.calculateResistance());
-//		System.out.println(vec3);
-		return vec3;
+	protected void clampRotation(Entity entityToUpdate) {
+		entityToUpdate.setYBodyRot(this.getYRot());
+		float yaw = Mth.wrapDegrees(entityToUpdate.getYRot() - this.getYRot());
+		float yaw1 = Mth.clamp(yaw, -105.0F, 105.0F);
+		entityToUpdate.yRotO += yaw1 - yaw;
+		entityToUpdate.setYRot(entityToUpdate.getYRot() + yaw1 - yaw);
+		entityToUpdate.setYHeadRot(entityToUpdate.getYRot());
 	}
 
 	@Override
-	public void tick() {
-		if (!this.isRemoved() && this.level.isLoaded(new BlockPos(this.getX(), this.getY(), this.getZ()))) {
-			// 处理发动机的输出功率，即加速度
-			if (this.entityData.get(ENGINE_ON)) {
-				if (this.entityData.get(ENGINE_START)) {
-					if (this.entityData.get(POWER) < this.getMaxPower()) {
-						this.entityData.set(POWER, this.entityData.get(POWER) + Math.min(this.getPowerAccel(), this.getMaxPower() - this.entityData.get(POWER)));
-					} else if (this.entityData.get(POWER) > this.getMaxPower()) {
-						this.entityData.set(POWER, this.getMaxPower());
-					}
-				} else {
-					if (this.entityData.get(POWER) > 0) {
-						this.entityData.set(POWER, this.entityData.get(POWER) - Math.min(this.getPowerAccel(), this.entityData.get(POWER)));
-					} else if (this.entityData.get(POWER) < 0) {
-						this.entityData.set(POWER, 0.0F);
-					}
-
-				}
-			}
-			// 处理飞机运动
-			Vec3 vector3d = this.getDeltaMovement();
-			double d0 = this.getX() + vector3d.x;
-			double d1 = this.getY() + vector3d.y;
-			double d2 = this.getZ() + vector3d.z;
-			this.setDeltaMovement(vector3d.add(this.calculateAccel()));
-			this.setPos(d0, d1, d2);
-
-			// 处理飞机降落
-			if (this.isOnGround()) {
-				this.setDeltaMovement(this.getDeltaMovement().x, 0.0D, this.getDeltaMovement().z);
-				BlockState state = this.level.getBlockState(new BlockPos(this.getX(), this.getY() - this.getLandingGearHeight(), this.getZ()));
-				if (!(state.getBlock() instanceof AirBlock))
-					this.setPos(this.getX(), Math.floor(this.getY() + 1), this.getZ());
-				else this.setPos(this.getX(), Math.floor(this.getY()), this.getZ());
-			}
-		}
+	public void onPassengerTurned(Entity entityToUpdate) {
+		this.clampRotation(entityToUpdate);
 	}
 
-	@Override
-	public boolean isOnGround() {
-		if (this.entityData.get(LANDING_GEAR)) {
-			BlockState state = this.level.getBlockState(new BlockPos(this.getX(), this.getY() - this.getLandingGearHeight(), this.getZ()));
-			BlockState state1 = this.level.getBlockState(new BlockPos(this.getX(), this.getY() - this.getLandingGearHeight() - 1, this.getZ()));
-			return !(state.getBlock() instanceof AirBlock) && !(state1.getBlock() instanceof AirBlock);
+	public enum Status {
+		ABOVE_WATER, // 以后写水路两栖飞机可能用到
+		STAND_ON_GROUND,
+		LIE_ON_GROUND,
+		IN_AIR,
+		UNDER_WATER
+	}
+
+	public double getXRotRad() {
+		return Math.toRadians(-this.getXRot());
+	}
+
+	public double getYRotRad() {
+		return -Math.toRadians(this.getYRot());
+	}
+
+	public float getZRot() {
+		return this.zRot;
+	}
+
+	public double getZRotRad() {
+		return Math.toRadians(this.zRot);
+	}
+
+	public void setZRot(float zRot) {
+		if (!Float.isFinite(zRot)) {
+			Util.logAndPauseIfInIde("Invalid entity rotation: " + zRot + ", discarding.");
 		} else {
-			BlockState state = this.level.getBlockState(new BlockPos(this.getX(), this.getY(), this.getZ()));
-			BlockState state1 = this.level.getBlockState(new BlockPos(this.getX(), this.getY() - 1, this.getZ()));
-			return !(state.getBlock() instanceof AirBlock) && !(state1.getBlock() instanceof AirBlock);
+			this.zRot = zRot;
 		}
 	}
 
-	@Override
-	public void setDeltaMovement(Vec3 motion) {
-		super.setDeltaMovement(motion);
-		this.entityData.set(X_SPEED, (float) motion.x);
-		this.entityData.set(Y_SPEED, (float) motion.y);
-		this.entityData.set(Z_SPEED, (float) motion.z);
+	protected void setRot(float pitch, float yaw, float roll) {
+//		if (pitch < -90.0F) { // TODO 错误算法
+//			pitch = 180.0F - pitch;
+//			yaw += 180.0F;
+//			roll += 180.0F;
+//		}
+//		if (pitch > 90.0F) {
+//			pitch = 180.0F - pitch;
+//			yaw += 180.0F;
+//			roll += 180.0F;
+//		}
+		this.setXRot(Mth.wrapDegrees(pitch));
+		this.setYRot(Mth.wrapDegrees(yaw));
+		this.setZRot(Mth.wrapDegrees(roll));
 	}
 
 	@Override
-	public boolean hurt(DamageSource pSource, float pAmount) { // TODO 根据子弹、炮弹等调整
-		return super.hurt(pSource, pAmount);
-	}
-
-	public void setInput(int index, boolean isDown) {
-		if (isDown) {
-			switch (index) {
-				case 0, 1, 2, 3, 5, 7, 9 -> {}
-				case 4 -> this.entityData.set(CLIMBING_UP, true);
-				case 6 -> this.entityData.set(DECLINING, true);
-				case 8 -> this.entityData.set(ENGINE_START, true);
-			}
-		} else {
-			switch (index) {
-				case 0, 1, 2, 3, 5, 7 -> {}
-				case 4 -> this.entityData.set(CLIMBING_UP, false);
-				case 6 -> this.entityData.set(DECLINING, false);
-				case 8 -> this.entityData.set(ENGINE_START, false);
-				case 9 -> this.entityData.set(ENGINE_ON, !this.entityData.get(ENGINE_ON));
-			}
-		}
-	}
-
-	@OnlyIn(Dist.CLIENT)
-	public void setClientInput(int index, boolean isDown) {
-		if (isDown) {
-			switch (index) {
-				case 0, 1, 2, 3, 5, 7, 9 -> {}
-				case 4 -> this.entityData.set(CLIMBING_UP, true);
-				case 6 -> this.entityData.set(DECLINING, true);
-				case 8 -> {
-					this.entityData.set(ENGINE_START, true);
-					System.out.println("开始");
-				}
-			}
-		} else {
-			switch (index) {
-				case 0, 1, 2, 3, 5, 7 -> {}
-				case 4 -> this.entityData.set(CLIMBING_UP, false);
-				case 6 -> this.entityData.set(DECLINING, false);
-				case 8 -> {
-					this.entityData.set(ENGINE_START, false);
-					System.out.println("engine stop");
-				}
-				case 9 -> this.entityData.set(ENGINE_ON, !this.entityData.get(ENGINE_ON));
-			}
-		}
-	}
-
-	/**
-	 * 飞机炸掉之后留下的东西
-	 *
-	 * @return 留下的所有东西
-	 */
-	public abstract NonNullList<ItemStack> getDropItem();
-
-	@Override
-	public void lerpTo(double pX, double pY, double pZ, float pYaw, float pPitch, int pPosRotationIncrements, boolean pTeleport) {
-		super.lerpTo(pX, pY, pZ, pYaw, pPitch, pPosRotationIncrements, pTeleport);
+	protected void setRot(float yaw, float pitch) {
+		this.setRot(pitch, yaw, this.getZRot());
 	}
 
 	@Override
-	public void lerpHeadTo(float pYaw, int pPitch) {
-		super.lerpHeadTo(pYaw, pPitch);
+	protected void readAdditionalSaveData(CompoundTag tag) {
+		this.setEngineState(tag.getBoolean("EngineState"));
+		this.setLandingGear(tag.getBoolean("LandingGear"));
+		this.setTractor(tag.getBoolean("Tractor"));
+		this.setEnginePower(tag.getInt("EnginePower"));
+		this.setZRot(tag.getFloat("ZRot"));
 	}
 
 	@Override
-	public void lerpMotion(double pX, double pY, double pZ) {
-		super.lerpMotion(pX, pY, pZ);
+	protected void addAdditionalSaveData(CompoundTag tag) {
+		tag.putBoolean("EngineState", this.getEngineState());
+		tag.putBoolean("LandingGear", this.getLandingGear());
+		tag.putBoolean("Tractor", this.getTractor());
+		tag.putInt("EnginePower", this.getEnginePower());
+		tag.putFloat("ZRot", this.getZRot());
 	}
 
 	@Override
 	public InteractionResult interact(Player player, InteractionHand hand) {
-		if (!this.level.isClientSide) {
-			player.stopRiding();
-			return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
+		if (player.isSecondaryUseActive()) {
+			return InteractionResult.PASS;
+		} else if (player.getItemInHand(hand).is(ItemList.TRACTOR.get()) && this.status == TestPlaneEntity.Status.STAND_ON_GROUND && !this.getTractor() && !this.getEngineState()) {
+			if (this.getControllingPassenger() == null && !this.level.isClientSide) {
+				this.setTractor(true);
+				if (!player.getAbilities().instabuild) player.getItemInHand(hand).shrink(1);
+				return InteractionResult.CONSUME;
+			}
+			return InteractionResult.PASS;
+		} else if (this.outOfControlTicks < 60.0F) {
+			if (!this.level.isClientSide) {
+				return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
+			} else {
+				return InteractionResult.SUCCESS;
+			}
+		} else {
+			return InteractionResult.PASS;
 		}
-		return InteractionResult.PASS;
 	}
 
 	@Override
-	protected boolean canAddPassenger(Entity entity) { // 只有玩家可以乘上飞机
-		return this.getPassengers().size() < 1 && entity instanceof Player;
+	protected boolean canAddPassenger(Entity passenger) {
+		return this.getPassengers().isEmpty() && passenger instanceof Player;
 	}
 
-	@Nullable
 	@Override
 	public Entity getControllingPassenger() {
 		return this.getFirstPassenger();
 	}
 
-	@Override
-	protected void readAdditionalSaveData(CompoundTag tag) {
-		this.entityData.set(X_SPEED, tag.getFloat("xSpeed"));
-		this.entityData.set(Y_SPEED, tag.getFloat("ySpeed"));
-		this.entityData.set(Z_SPEED, tag.getFloat("zSpeed"));
-		this.entityData.set(CLIMB_AND_DECLINE_SPEED, tag.getFloat("climbAndDeclineSpeed"));
-		this.entityData.set(PITCH, tag.getFloat("pitch"));
-		this.entityData.set(YAW, tag.getFloat("yaw"));
-		this.entityData.set(ROLL, tag.getFloat("roll"));
-		this.entityData.set(PITCH_SPEED, tag.getFloat("pitchSpeed"));
-		this.entityData.set(YAW_SPEED, tag.getFloat("yawSpeed"));
-		this.entityData.set(ROLL_SPEED, tag.getFloat("rollSpeed"));
-		this.entityData.set(ENGINE_ON, tag.getBoolean("engineOn"));
-		this.entityData.set(ENGINE_START, tag.getBoolean("engineStart"));
-		this.entityData.set(AUXILIARY_TANK, tag.getBoolean("auxiliaryTank"));
-		this.entityData.set(LANDING_GEAR, tag.getBoolean("landingGear"));
-	}
-
-	@Override
-	protected void addAdditionalSaveData(CompoundTag tag) {
-		tag.putFloat("xSpeed", this.entityData.get(X_SPEED));
-		tag.putFloat("ySpeed", this.entityData.get(Y_SPEED));
-		tag.putFloat("zSpeed", this.entityData.get(Z_SPEED));
-		tag.putFloat("climbAndDeclineSpeed", this.entityData.get(CLIMB_AND_DECLINE_SPEED));
-		tag.putFloat("pitch", this.entityData.get(PITCH));
-		tag.putFloat("yaw", this.entityData.get(YAW));
-		tag.putFloat("roll", this.entityData.get(ROLL));
-		tag.putFloat("pitchSpeed", this.entityData.get(PITCH_SPEED));
-		tag.putFloat("yawSpeed", this.entityData.get(YAW_SPEED));
-		tag.putFloat("rollSpeed", this.entityData.get(ROLL_SPEED));
-		tag.putBoolean("engineOn", this.entityData.get(ENGINE_ON));
-		tag.putBoolean("engineStart", this.entityData.get(ENGINE_START));
-		tag.putBoolean("auxiliaryTank", this.entityData.get(AUXILIARY_TANK));
-		tag.putBoolean("landingGear", this.entityData.get(LANDING_GEAR));
+	public void setClientInput(boolean lookUp, boolean lookDown, boolean leftRoll, boolean rightRoll,
+							   boolean climbUp, boolean decline, boolean left, boolean right, boolean speedUp,
+							   boolean launchMissile, boolean interceptorMissile, boolean launchCannonball) {
+		this.inputLookUp = lookUp;
+		this.inputLookDown = lookDown;
+		this.inputLeftRoll = leftRoll;
+		this.inputRightRoll = rightRoll;
+		this.inputClimbUp = climbUp;
+		this.inputDecline = decline;
+		this.inputLeft = left;
+		this.inputRight = right;
+		this.inputSpeedUp = speedUp;
+		this.inputLaunchMissile = launchMissile;
+		this.inputInterceptorMissile = interceptorMissile;
+		this.inputLaunchCannonball = launchCannonball;
 	}
 
 	@Override
