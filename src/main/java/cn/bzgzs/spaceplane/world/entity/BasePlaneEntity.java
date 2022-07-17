@@ -43,11 +43,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-/**
- * 战斗机的抽象类<br>
- * 以下注释所述的战机坐标系，均以飞机为原点，飞机头朝向为<strong>Z轴</strong>正方向，飞机EyeHeight为Y轴原点，按右手定则建立的坐标系<br>
- * 本类中定义所有关于角度的变量，均采用弧度制
- */
 public abstract class BasePlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> SPEED_UP = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
@@ -102,6 +97,10 @@ public abstract class BasePlaneEntity extends Entity {
 	@Override
 	protected abstract float getEyeHeight(Pose pose, EntityDimensions size);
 
+	protected abstract double getMaxSpeed();
+
+	protected abstract double getMaxAccel();
+
 	@Override
 	protected Entity.MovementEmission getMovementEmission() {
 		return Entity.MovementEmission.NONE;
@@ -149,12 +148,12 @@ public abstract class BasePlaneEntity extends Entity {
 	public abstract double getPassengersRidingOffset();
 
 	@Override
-	public boolean hurt(DamageSource source, float amount) { // TODO
+	public boolean hurt(DamageSource source, float amount) {
 		return false;
 	}
 
 	@Override
-	public void push(Entity entity) { // TODO
+	public void push(Entity entity) {
 		if (entity instanceof TestPlaneEntity) {
 			if (entity.getBoundingBox().minY < this.getBoundingBox().maxY) {
 				super.push(entity);
@@ -226,7 +225,7 @@ public abstract class BasePlaneEntity extends Entity {
 				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
 			}
 			if (this.level.isClientSide && this.getEngineState()) {
-				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
+				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D * this.getMaxAccel()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad())));
 			}
 			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO 需要覆写
 		} else {
@@ -330,7 +329,7 @@ public abstract class BasePlaneEntity extends Entity {
 		}
 	}
 
-	private void flyInAir() { // TODO 麻了，整个都要重写的
+	private void flyInAir() {
 		Vec3 motion = this.getDeltaMovement();
 		if (motion.y > -0.5D) {
 			this.fallDistance = 1.0F;
@@ -363,7 +362,7 @@ public abstract class BasePlaneEntity extends Entity {
 		} else if (this.inputDecline) {
 			lift *= -2;
 		}
-		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad());
+		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad());
 		motion = motion.add(liftVec);
 
 		this.setRot(this.getXRot() + this.deltaPitch, this.getYRot() + this.deltaYaw, this.getZRot() + this.deltaRoll);
@@ -408,7 +407,7 @@ public abstract class BasePlaneEntity extends Entity {
 		this.deltaYaw *= 0.9F;
 		this.deltaRoll *= 0.9F;
 
-		Vec3d res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
+		Vec3d res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
@@ -679,7 +678,8 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	private Vec3 calculateRiderOffset() {
-		return new Vec3(0.0D, this.getEyeHeight() + this.getPassengersRidingOffset(), 0.0D).add(new Vec3d(0.0D, 0.0D, this.getHorizontalRidingOffset()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad()));
+		return new Vec3(0.0D, this.getEyeHeight() + this.getPassengersRidingOffset(), 0.0D)
+				.add(new Vec3d(0.0D, 0.0D, this.getHorizontalRidingOffset()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad()));
 	}
 
 	protected void clampRotation(Entity entityToUpdate) {
@@ -729,24 +729,14 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	protected void setRot(float pitch, float yaw, float roll) {
-//		if (pitch < -90.0F) { // TODO 错误算法
-//			pitch = 180.0F - pitch;
-//			yaw += 180.0F;
-//			roll += 180.0F;
-//		}
-//		if (pitch > 90.0F) {
-//			pitch = 180.0F - pitch;
-//			yaw += 180.0F;
-//			roll += 180.0F;
-//		}
-		this.setXRot(Mth.wrapDegrees(pitch));
-		this.setYRot(Mth.wrapDegrees(yaw));
+		this.setRot(yaw, pitch);
 		this.setZRot(Mth.wrapDegrees(roll));
 	}
 
 	@Override
 	protected void setRot(float yaw, float pitch) {
-		this.setRot(pitch, yaw, this.getZRot());
+		this.setXRot(Mth.wrapDegrees(pitch));
+		this.setYRot(Mth.wrapDegrees(yaw));
 	}
 
 	@Override

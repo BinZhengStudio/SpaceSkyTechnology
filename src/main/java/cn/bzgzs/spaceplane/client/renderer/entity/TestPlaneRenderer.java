@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -44,15 +45,14 @@ public class TestPlaneRenderer extends EntityRenderer<TestPlaneEntity> implement
 
 		VertexConsumer cutoutNoCull = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
 		VertexConsumer translucentCull = buffer.getBuffer(RenderType.entityTranslucentCull(TEXTURE));
-//		this.getModel().renderToBuffer(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F,1.0F,1.0F);
 		matrixStack.translate(0.0D, 3.5D, 0.0D);
-//		matrixStack.mulPose(Quaternion.fromXYZ((float) -entity.getXRotRad(), (float) entity.getYRotRad(), (float) entity.getZRotRad()));
-		matrixStack.mulPose(Vector3f.XP.rotationDegrees(entity.getXRot()));
-		matrixStack.mulPose(Vector3f.YP.rotationDegrees(-entity.getYRot()));
-		matrixStack.mulPose(Vector3f.ZP.rotationDegrees(entity.getZRot()));
+		matrixStack.mulPose(Vector3f.YP.rotationDegrees(Mth.lerp(partialTicks, -entity.yRotO, -entity.getYRot())));
+		matrixStack.mulPose(Vector3f.XP.rotationDegrees(Mth.lerp(partialTicks, entity.xRotO, entity.getXRot())));
+		matrixStack.mulPose(Vector3f.ZP.rotationDegrees(Mth.lerp(partialTicks, entity.zRotO, entity.getZRot())));
 		this.getModel().commonPartRender(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
 		this.getModel().cullPartRender(matrixStack, translucentCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
-		this.getModel().engineDecorateRender(matrixStack,  cutoutNoCull,  packedLight,  OverlayTexture.NO_OVERLAY,  1.0F, 1.0F, 1.0F, 1.0F);
+		this.getModel().engineDecorateRender(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+		if (entity.getLandingGear()) this.getModel().landingGearRenderer(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
 		matrixStack.popPose();
 	}
 }

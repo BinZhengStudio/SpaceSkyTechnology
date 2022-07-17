@@ -13,6 +13,7 @@ import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -37,6 +38,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.network.NetworkHooks;
 
 import java.util.List;
+import java.util.UUID;
 
 public class TestPlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
@@ -50,6 +52,7 @@ public class TestPlaneEntity extends Entity {
 	public static final int LANDING_GEAR_HEIGHT = 2;
 	private float outOfControlTicks;
 	private float zRot;
+	public float zRotO;
 	private float deltaPitch;
 	private float deltaYaw;
 	private float deltaRoll;
@@ -222,7 +225,7 @@ public class TestPlaneEntity extends Entity {
 				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
 			}
 			if (this.level.isClientSide && this.getEngineState()) {
-				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad())));
+				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
 			}
 			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO 需要覆写
 		} else {
@@ -255,6 +258,12 @@ public class TestPlaneEntity extends Entity {
 				}
 			}
 		}
+	}
+
+	@Override
+	public void baseTick() {
+		super.baseTick();
+		this.zRotO = this.getZRot();
 	}
 
 	private void controlTractor() {
@@ -353,13 +362,13 @@ public class TestPlaneEntity extends Entity {
 			motion = motion.add((lookAngle.x / lookDistance * motionDistance - motion.x) * 0.1D, 0.0D, (lookAngle.z / lookDistance * motionDistance - motion.z) * 0.1D);
 		}
 
-		double lift = this.getLookSpeed() >= 1.5 ? 0.02D : 0.008888888888888888D * this.getDeltaMovement().horizontalDistanceSqr();
+		double lift = this.getLookSpeed() >= 1.5 ? 0.02D : 0.008888888888888888D * this.getLookSpeedSqr();
 		if (this.inputClimbUp) {
 			lift *= 2;
 		} else if (this.inputDecline) {
 			lift *= -2;
 		}
-		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad());
+		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad());
 		motion = motion.add(liftVec);
 
 		this.setRot(this.getXRot() + this.deltaPitch, this.getYRot() + this.deltaYaw, this.getZRot() + this.deltaRoll);
@@ -404,7 +413,12 @@ public class TestPlaneEntity extends Entity {
 		this.deltaYaw *= 0.9F;
 		this.deltaRoll *= 0.9F;
 
-		Vec3d res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad());
+		Vec3d res;
+		if (this.getDeltaMovement().dot(this.getLookAngle()) >= 0) {
+			res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
+		} else {
+			res = new Vec3d(0.0D, 0.0D, -0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
+		}
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
@@ -675,8 +689,9 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	private Vec3 calculateRiderOffset() {
-		return new Vec3(0.0D, this.getEyeHeight() + this.getPassengersRidingOffset(), 0.0D)
-				.add(new Vec3d(0.0D, 0.0D, this.getHorizontalRidingOffset()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad()));
+		return new Vec3(0.0D, this.getEyeHeight(), 0.0D)
+				.add(new Vec3d(0.0D, 0.0D, this.getHorizontalRidingOffset()).xRot(this.getXRotRad()).yRot(this.getYRotRad()))
+				.add(new Vec3d(0.0D, -1.62D, 0.0D));
 	}
 
 	protected void clampRotation(Entity entityToUpdate) {
