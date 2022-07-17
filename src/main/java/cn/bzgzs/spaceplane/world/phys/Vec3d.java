@@ -9,8 +9,8 @@ public class Vec3d extends Vec3 {
 		super(x, y, z);
 	}
 
-	public Vec3d(Vector3f pFloatVector) {
-		super(pFloatVector);
+	public Vec3d(Vector3f floatVector) {
+		super(floatVector);
 	}
 
 	@Override

@@ -151,6 +151,10 @@ public class TestPlaneEntity extends Entity {
 	public boolean hurt(DamageSource source, float amount) {
 		return false;
 	}
+	
+	public boolean hurt(PlanePart part, DamageSource source, float amount) { // TODO
+		return false;
+	}
 
 	@Override
 	public void push(Entity entity) {
@@ -426,6 +430,10 @@ public class TestPlaneEntity extends Entity {
 		this.setSpeedUp(speedUp);
 		this.setLeft(left);
 		this.setRight(right);
+	}
+	
+	protected Vec3d getCenterPos() {
+		return new Vec3d(this.getX(), this.getY() + this.getEyeHeight(), this.getY());
 	}
 
 	public void setInputEngineOnActivation(boolean activation) {
@@ -714,6 +722,23 @@ public class TestPlaneEntity extends Entity {
 		LIE_ON_GROUND,
 		IN_AIR,
 		UNDER_WATER
+	}
+
+	public enum Part {
+		HEAD,
+		BODY,
+		ENGINE,
+		WINDSHIELD,
+		LEFT_WING,
+		RIGHT_WING,
+		LEFT_RUDDER,
+		RIGHT_RUDDER,
+		LEFT_LANDING_GEAR,
+		RIGHT_LANDING_GEAR,
+		FRONT_LANDING_GEAR,
+		LEFT_LANDING_GEAR_WHEEL,
+		RIGHT_LANDING_GEAR_WHEEL,
+		FRONT_LANDING_GEAR_WHEEL,
 	}
 
 	public double getXRotRad() {
