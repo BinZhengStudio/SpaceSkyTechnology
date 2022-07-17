@@ -8,6 +8,8 @@
   "block.spaceplane.deepslate_nickel_ore": "深层镍矿石",
   "block.spaceplane.nickel_block": "镍块",
   "block.spaceplane.steam_engine": "蒸汽引擎",
+  "block.spaceplane.fluid_pipe": "液体管道",
+  "block.spaceplane.alloy_furnace": "合金炉",
 
   "item.spaceplane.rhenium_ingot": "铼锭",
   "item.spaceplane.nickel_ingot": "镍锭",

@@ -8,6 +8,8 @@
   "block.spaceplane.deepslate_nickel_ore": "Deepslate Nickel Ore",
   "block.spaceplane.nickel_block": "Nickel Block",
   "block.spaceplane.steam_engine": "Steam Engine",
+  "block.spaceplane.fluid_pipe": "Fluid Pipe",
+  "block.spaceplane.alloy_furnace": "Alloy Furnace",
 
   "item.spaceplane.rhenium_ingot": "Rhenium Ingot",
   "item.spaceplane.nickel_ingot": "Nickel Ingot",
