@@ -1,12 +1,21 @@
 package cn.bzgzs.spaceplane.world.entity;
 
 import cn.bzgzs.spaceplane.world.phys.Vec3d;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.entity.PartEntity;
 
 public class PlanePart extends PartEntity<TestPlaneEntity> {
@@ -46,6 +55,63 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 		return true;
 	}
 
+	protected boolean isOnLand() { // TODO
+		AABB aabb = this.getBoundingBox();
+		AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001D, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
+		int i = Mth.floor(aabb1.minX) - 1;
+		int j = Mth.ceil(aabb1.maxX) + 1;
+		int k = Mth.floor(aabb1.minY) - 1;
+		int l = Mth.ceil(aabb1.maxY) + 1;
+		int i1 = Mth.floor(aabb1.minZ) - 1;
+		int j1 = Mth.ceil(aabb1.maxZ) + 1;
+		VoxelShape voxelshape = Shapes.create(aabb1);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (int l1 = i; l1 < j; ++l1) {
+			for (int i2 = i1; i2 < j1; ++i2) {
+				int j2 = (l1 != i && l1 != j - 1 ? 0 : 1) + (i2 != i1 && i2 != j1 - 1 ? 0 : 1);
+				if (j2 != 2) {
+					for (int k2 = k; k2 < l; ++k2) {
+						if (j2 <= 0 || k2 != k && k2 != l - 1) {
+							pos.set(l1, k2, i2);
+							BlockState blockstate = this.level.getBlockState(pos);
+							if (!blockstate.isAir() && Shapes.joinIsNotEmpty(blockstate.getCollisionShape(this.level, pos).move(l1, k2, i2), voxelshape, BooleanOp.AND)) {
+								return true;
+							}
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	protected boolean checkUnderWater() {
+		AABB aabb = this.getBoundingBox();
+		double d0 = aabb.maxY + 0.001D;
+		int minX = Mth.floor(aabb.minX);
+		int maxX = Mth.ceil(aabb.maxX);
+		int minY = Mth.floor(aabb.minY);
+		int maxY = Mth.ceil(d0);
+		int minZ = Mth.floor(aabb.minZ);
+		int maxZ = Mth.ceil(aabb.maxZ);
+		boolean flag = false;
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (int x = minX; x < maxX; ++x) {
+			for (int y = minY; y < maxY; ++y) {
+				for (int z = minZ; z < maxZ; ++z) {
+					pos.set(x, y, z);
+					FluidState fluidstate = this.level.getFluidState(pos);
+					if (fluidstate.is(FluidTags.WATER) && d0 < (double) ((float) pos.getY() + fluidstate.getHeight(this.level, pos))) {
+						flag = true;
+					}
+				}
+			}
+		}
+		return flag;
+	}
+
 	@Override
 	public boolean hurt(DamageSource source, float amount) {
 		return !this.isInvulnerableTo(source) && this.getParent().hurt(this, source, amount);
@@ -54,6 +120,20 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 	@Override
 	public boolean is(Entity entity) {
 		return this == entity || this.getParent() == entity;
+	}
+
+	protected boolean isLandingGear() {
+		boolean flag1 = (this.part == TestPlaneEntity.Part.FRONT_LANDING_GEAR || this.part == TestPlaneEntity.Part.FRONT_LANDING_GEAR_WHEEL);
+		boolean flag2 = (this.part == TestPlaneEntity.Part.LEFT_LANDING_GEAR || this.part == TestPlaneEntity.Part.LEFT_LANDING_GEAR_WHEEL);
+		boolean flag3 = (this.part == TestPlaneEntity.Part.RIGHT_LANDING_GEAR || this.part == TestPlaneEntity.Part.RIGHT_LANDING_GEAR_WHEEL);
+		return flag1 || flag2 || flag3;
+	}
+
+	protected boolean isWheel() {
+		boolean flag1 = (this.part == TestPlaneEntity.Part.FRONT_LANDING_GEAR_WHEEL);
+		boolean flag2 = (this.part == TestPlaneEntity.Part.LEFT_LANDING_GEAR_WHEEL);
+		boolean flag3 = (this.part == TestPlaneEntity.Part.RIGHT_LANDING_GEAR_WHEEL);
+		return flag1 || flag2 || flag3;
 	}
 
 	private void setPosOld(Vec3 pos) {
