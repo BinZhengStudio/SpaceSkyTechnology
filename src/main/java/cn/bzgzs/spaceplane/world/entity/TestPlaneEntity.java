@@ -13,7 +13,6 @@ import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -35,10 +34,12 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.entity.PartEntity;
 import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class TestPlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
@@ -79,9 +80,11 @@ public class TestPlaneEntity extends Entity {
 	private boolean inputLaunchCannonball;
 	private TestPlaneEntity.Status status;
 	private TestPlaneEntity.Status oldStatus;
+	protected List<PlanePart> parts = new ArrayList<>();
 
 	public TestPlaneEntity(EntityType<?> type, Level world) {
 		super(type, world);
+		this.defineParts();
 	}
 
 //	public TestPlaneEntity(Level world, double x, double y, double z) {
@@ -102,6 +105,99 @@ public class TestPlaneEntity extends Entity {
 		return Entity.MovementEmission.NONE;
 	}
 
+	public void defineParts() {
+		// 头
+		this.parts.add(new PlanePart(this, 0, -13, 52, Part.HEAD, 8));
+		this.parts.add(new PlanePart(this, -4, -17, 44, Part.HEAD, 8));
+		this.parts.add(new PlanePart(this, -4, -9, 44, Part.HEAD, 8));
+		this.parts.add(new PlanePart(this, 4, -17, 44, Part.HEAD, 8));
+		this.parts.add(new PlanePart(this, 4, -9, 44, Part.HEAD, 8));
+
+		// 身内右下
+		this.parts.add(new PlanePart(this, -4, -17, 36, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -17, 28, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -17, 20, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -17, 12, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -17, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -17, -4, Part.BODY, 8));
+		// 身内右上
+		this.parts.add(new PlanePart(this, -4, -9, 36, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -9, 28, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -9, 20, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -9, 12, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -9, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -4, -9, -4, Part.BODY, 8));
+		// 身外右下
+		this.parts.add(new PlanePart(this, -12, -17, 36, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -17, 28, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -17, 20, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -17, 12, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -17, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -17, -4, Part.BODY, 8));
+		// 身外右上
+		this.parts.add(new PlanePart(this, -12, -9, 36, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -9, 28, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -9, 20, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -9, 12, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -9, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -12, -9, -4, Part.BODY, 8));
+		// 身外外右下
+		this.parts.add(new PlanePart(this, -20, -17, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -20, -17, -4, Part.BODY, 8));
+		// 身外外右上
+		this.parts.add(new PlanePart(this, -20, -9, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, -20, -9, -4, Part.BODY, 8));
+		// 身内左下
+		this.parts.add(new PlanePart(this, 4, -17, 36, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -17, 28, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -17, 20, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -17, 12, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -17, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -17, -4, Part.BODY, 8));
+		// 身内左上
+		this.parts.add(new PlanePart(this, 4, -9, 36, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -9, 28, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -9, 20, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -9, 12, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -9, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 4, -9, -4, Part.BODY, 8));
+		// 身外左下
+		this.parts.add(new PlanePart(this, 12, -17, 36, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -17, 28, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -17, 20, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -17, 12, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -17, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -17, -4, Part.BODY, 8));
+		// 身外左上
+		this.parts.add(new PlanePart(this, 12, -9, 36, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -9, 28, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -9, 20, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -9, 12, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -9, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 12, -9, -4, Part.BODY, 8));
+		// 身外外左下
+		this.parts.add(new PlanePart(this, 20, -17, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 20, -17, -4, Part.BODY, 8));
+		// 身外外左上
+		this.parts.add(new PlanePart(this, 20, -9, 4, Part.BODY, 8));
+		this.parts.add(new PlanePart(this, 20, -9, -4, Part.BODY, 8));
+		// 引内右下
+		this.parts.add(new PlanePart(this, -4, -17, -12, Part.ENGINE, 8));
+		// 引内右上
+		this.parts.add(new PlanePart(this, -4, -9, -12, Part.ENGINE, 8));
+		// 引内左下
+		this.parts.add(new PlanePart(this, 4, -17, -12, Part.ENGINE, 8));
+		// 引内左上
+		this.parts.add(new PlanePart(this, 4, -9, -12, Part.ENGINE, 8));
+
+		this.parts.add(new PlanePart(this, 0, -24, 19, Part.FRONT_LANDING_GEAR, 8));
+		this.parts.add(new PlanePart(this, -10, -24, -24, Part.LEFT_LANDING_GEAR, 8));
+		this.parts.add(new PlanePart(this, 10, -24, -24, Part.RIGHT_LANDING_GEAR, 8));
+		this.parts.add(new PlanePart(this, 0, -31, 19, Part.FRONT_LANDING_GEAR_WHEEL, 6));
+		this.parts.add(new PlanePart(this, -10, -31, -24, Part.LEFT_LANDING_GEAR_WHEEL, 6));
+		this.parts.add(new PlanePart(this, 10, -31, -24, Part.RIGHT_LANDING_GEAR_WHEEL, 6));
+	}
+
 	@Override
 	protected void defineSynchedData() {
 		this.entityData.define(ENGINE_ON, false);
@@ -112,6 +208,13 @@ public class TestPlaneEntity extends Entity {
 		this.entityData.define(TRACTOR, false);
 		this.entityData.define(FUEL, 0); // 燃油量，单位mB
 		this.entityData.define(ENGINE_POWER, 0);
+	}
+
+	@Nullable
+	@Override
+	public PartEntity<?>[] getParts() {
+		PartEntity<?>[] partEntities = new PartEntity[0];
+		return this.parts.toArray(partEntities);
 	}
 
 	@Override
@@ -151,7 +254,7 @@ public class TestPlaneEntity extends Entity {
 	public boolean hurt(DamageSource source, float amount) {
 		return false;
 	}
-	
+
 	public boolean hurt(PlanePart part, DamageSource source, float amount) { // TODO
 		return false;
 	}
@@ -252,6 +355,10 @@ public class TestPlaneEntity extends Entity {
 //			NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(this.getSpeedUp(), this.getLeft(), this.getRight()));
 		}
 
+		this.parts.forEach(part -> {
+			part.updatePos(true);
+		});
+
 		this.checkInsideBlocks(); // TODO 以后要覆写的
 		// 推动实体。TODO 以后要重写
 		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
@@ -313,7 +420,7 @@ public class TestPlaneEntity extends Entity {
 	}
 
 	private void resistanceAboveWater() { // TODO 实际数值根据进水体积决定
-		Vec3d airRes = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
+		Vec3d airRes = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
 		this.deltaPitch *= 0.9D;
 		this.deltaYaw *= 0.9D;
@@ -372,7 +479,7 @@ public class TestPlaneEntity extends Entity {
 		} else if (this.inputDecline) {
 			lift *= -2;
 		}
-		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).zRot(this.getZRotRad());
+		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).zRot(-this.getZRotRad()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
 		motion = motion.add(liftVec);
 
 		this.setRot(this.getXRot() + this.deltaPitch, this.getYRot() + this.deltaYaw, this.getZRot() + this.deltaRoll);
@@ -431,9 +538,9 @@ public class TestPlaneEntity extends Entity {
 		this.setLeft(left);
 		this.setRight(right);
 	}
-	
+
 	protected Vec3d getCenterPos() {
-		return new Vec3d(this.getX(), this.getY() + this.getEyeHeight(), this.getY());
+		return new Vec3d(this.getX(), this.getY() + this.getEyeHeight(), this.getZ());
 	}
 
 	public void setInputEngineOnActivation(boolean activation) {
@@ -841,6 +948,11 @@ public class TestPlaneEntity extends Entity {
 		this.inputLaunchMissile = launchMissile;
 		this.inputInterceptorMissile = interceptorMissile;
 		this.inputLaunchCannonball = launchCannonball;
+	}
+
+	@Override
+	public boolean isMultipartEntity() {
+		return true;
 	}
 
 	@Override

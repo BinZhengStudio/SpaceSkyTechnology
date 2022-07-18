@@ -19,11 +19,22 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 		this.pointVec = pointVec;
 		this.part = part;
 		this.size = EntityDimensions.fixed(size, size);
+		this.refreshDimensions();
+		this.setPosOld(parent.getCenterPos());
+	}
+
+//	public PlanePart(TestPlaneEntity parent, double x, double y, double z, TestPlaneEntity.Part part, float size) {
+//		this(parent, new Vec3d(x, y, z), part, size);
+//	}
+
+	public PlanePart(TestPlaneEntity parent, int pixelX, int pixelY, int pixelZ, TestPlaneEntity.Part part, int pixelSize) {
+		this(parent, new Vec3d(pixelX / 16.0D, pixelY / 16.0D, pixelZ / 16.0D), part, pixelSize / 16.0F);
 	}
 
 	protected void updatePos(boolean collision) {
+		this.setPosOld(this.getPosition(1.0F));
 		if (collision) {
-			Vec3d offset = this.pointVec.xRot(this.getParent().getXRotRad()).yRot(this.getParent().getYRotRad()).zRot(this.getParent().getZRotRad());
+			Vec3d offset = this.pointVec.zRot(-this.getParent().getZRotRad()).xRot(this.getParent().getXRotRad()).yRot(this.getParent().getYRotRad());
 			this.setPos(this.getParent().getCenterPos().add(offset).add(0.0D, -this.size.height / 2, 0.0D));
 		} else {
 			this.setPos(this.getParent().getCenterPos());
@@ -43,6 +54,15 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 	@Override
 	public boolean is(Entity entity) {
 		return this == entity || this.getParent() == entity;
+	}
+
+	private void setPosOld(Vec3 pos) {
+		this.xo = pos.x;
+		this.yo = pos.y;
+		this.zo = pos.z;
+		this.xOld = this.xo;
+		this.yOld = this.yo;
+		this.zOld = this.zo;
 	}
 
 	@Override
