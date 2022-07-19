@@ -30,6 +30,5 @@ public class ItemList {
 	public static final RegistryObject<BlockItem> DEEPSLATE_NICKEL_ORE = ITEMS.register("deepslate_nickel_ore", () -> new BlockItem(BlockList.DEEPSLATE_NICKEL_ORE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<BlockItem> NICKEL_BLOCK = ITEMS.register("nickel_block", () -> new BlockItem(BlockList.NICKEL_BLOCK.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<BlockItem> ALLOY_FURNACE = ITEMS.register("alloy_furnace", () -> new BlockItem(BlockList.ALLOY_FURNACE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
-	public static final RegistryObject<BlockItem> FLUID_PIPE = ITEMS.register("fluid_pipe", () -> new BlockItem(BlockList.FLUID_PIPE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<BlockItem> STEAM_ENGINE = ITEMS.register("steam_engine", () -> new BlockItem(BlockList.STEAM_ENGINE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 }
