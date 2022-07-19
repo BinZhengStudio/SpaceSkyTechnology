@@ -1,6 +1,7 @@
 package cn.bzgzs.spaceplane.network.client;
 
 import cn.bzgzs.spaceplane.network.CustomPacket;
+import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -13,8 +14,8 @@ public class PlaneEnginePowerPacket extends CustomPacket {
 		this.enginePower = buf.readInt();
 	}
 
-	public PlaneEnginePowerPacket(int enginePower) {
-		this.enginePower = enginePower;
+	public PlaneEnginePowerPacket(TestPlaneEntity entity) {
+		this.enginePower = entity.getEnginePower();
 	}
 
 	@Override

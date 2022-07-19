@@ -2,34 +2,36 @@ package cn.bzgzs.spaceplane.network.client;
 
 import cn.bzgzs.spaceplane.network.CustomPacket;
 import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class PlaneControlPacket extends CustomPacket {
-	private final boolean left;
-	private final boolean right;
-	private final boolean speedUp;
+public class PlaneRotateChangedPacket extends CustomPacket {
+	private final float pitch;
+	private final float yaw;
+	private final float roll;
 
-	public PlaneControlPacket(FriendlyByteBuf buf) {
-		this.speedUp = buf.readBoolean();
-		this.left = buf.readBoolean();
-		this.right = buf.readBoolean();
+	public PlaneRotateChangedPacket(FriendlyByteBuf buf) {
+		this.pitch = buf.readFloat();
+		this.yaw = buf.readFloat();
+		this.roll = buf.readFloat();
 	}
 
-	public PlaneControlPacket(boolean speedUp, boolean left, boolean right) {
-		this.speedUp = speedUp;
-		this.left = left;
-		this.right = right;
+	public PlaneRotateChangedPacket(TestPlaneEntity entity) {
+		this.pitch = entity.getXRot();
+		this.yaw = entity.getYRot();
+		this.roll = entity.getZRot();
 	}
 
 	@Override
 	public void encode(FriendlyByteBuf buf) {
-		buf.writeBoolean(speedUp);
-		buf.writeBoolean(left);
-		buf.writeBoolean(right);
+		buf.writeFloat(pitch);
+		buf.writeFloat(yaw);
+		buf.writeFloat(roll);
 	}
 
 	@Override
@@ -38,7 +40,7 @@ public class PlaneControlPacket extends CustomPacket {
 			ServerPlayer sender = context.get().getSender();
 			if (sender != null) {
 				if (sender.getVehicle() instanceof TestPlaneEntity plane) {
-					plane.setControlState(speedUp, left, right);
+					plane.setRot(this.pitch, this.yaw, this.roll);
 				}
 			} else {
 				throw new NullPointerException("Fuck! Sender is NULL!");

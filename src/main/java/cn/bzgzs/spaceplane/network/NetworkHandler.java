@@ -2,6 +2,7 @@ package cn.bzgzs.spaceplane.network;
 
 import cn.bzgzs.spaceplane.SpacePlane;
 import cn.bzgzs.spaceplane.network.client.*;
+import cn.bzgzs.spaceplane.network.server.PlaneRotateSyncPacket;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
@@ -17,11 +18,12 @@ public class NetworkHandler {
 	public static void register() {
 		register(SteamEngineWaterIOPacket.class, SteamEngineWaterIOPacket::new);
 		register(SteamEngineSetSpeedPacket.class, SteamEngineSetSpeedPacket::new);
-		register(PlaneControlPacket.class, PlaneControlPacket::new);
 		register(PlaneEnginePacket.class, PlaneEnginePacket::new);
 		register(PlaneLandingGearPacket.class, PlaneLandingGearPacket::new);
 		register(PlaneTractorPacket.class,PlaneTractorPacket::new);
 		register(PlaneEnginePowerPacket.class, PlaneEnginePowerPacket::new);
+		register(PlaneRotateSyncPacket.class, PlaneRotateSyncPacket::new);
+		register(PlaneRotateChangedPacket.class, PlaneRotateChangedPacket::new);
 	}
 
 	private static <M extends CustomPacket> void register(Class<M> packet, Function<FriendlyByteBuf, M> decoder) {

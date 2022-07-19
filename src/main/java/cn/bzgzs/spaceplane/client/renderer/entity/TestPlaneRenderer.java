@@ -45,7 +45,7 @@ public class TestPlaneRenderer extends EntityRenderer<TestPlaneEntity> implement
 
 		VertexConsumer cutoutNoCull = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
 		VertexConsumer translucentCull = buffer.getBuffer(RenderType.entityTranslucentCull(TEXTURE));
-		matrixStack.translate(0.0D, 3.5D, 0.0D);
+		matrixStack.translate(0.0D, entity.getEyeHeight(), 0.0D);
 		if ((entity.yRotO < -90 && entity.getYRot() > 90) || (entity.yRotO > 90 && entity.getYRot() < -90)) {
 			matrixStack.mulPose(Vector3f.YP.rotationDegrees(-entity.getYRot()));
 		} else {

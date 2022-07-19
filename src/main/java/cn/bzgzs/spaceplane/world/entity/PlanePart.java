@@ -18,6 +18,8 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.entity.PartEntity;
 
+import java.util.List;
+
 public class PlanePart extends PartEntity<TestPlaneEntity> {
 	private final Vec3d pointVec;
 	private final TestPlaneEntity.Part part;
@@ -54,6 +56,42 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 	public boolean isPickable() {
 		return true;
 	}
+
+	protected Vec3 collide(Vec3 motion) {
+		AABB aabb = this.getBoundingBox();
+		List<VoxelShape> list = this.level.getEntityCollisions(this, aabb.expandTowards(motion));
+		Vec3 vec3 = motion.lengthSqr() == 0.0D ? motion : collideBoundingBox(this, motion, aabb, this.level, list);
+		boolean flag = motion.x != vec3.x;
+		boolean flag1 = motion.y != vec3.y;
+		boolean flag2 = motion.z != vec3.z;
+		boolean flag3 = this.onGround || flag1 && motion.y < 0.0D;
+		if (this.maxUpStep > 0.0F && flag3 && (flag || flag2)) {
+			Vec3 vec31 = collideBoundingBox(this, new Vec3(motion.x, this.maxUpStep, motion.z), aabb, this.level, list);
+			Vec3 vec32 = collideBoundingBox(this, new Vec3(0.0D, this.maxUpStep, 0.0D), aabb.expandTowards(motion.x, 0.0D, motion.z), this.level, list);
+			if (vec32.y < (double) this.maxUpStep) {
+				Vec3 vec33 = collideBoundingBox(this, new Vec3(motion.x, 0.0D, motion.z), aabb.move(vec32), this.level, list).add(vec32);
+				if (vec33.horizontalDistanceSqr() > vec31.horizontalDistanceSqr()) {
+					vec31 = vec33;
+				}
+			}
+
+			if (vec31.horizontalDistanceSqr() > vec3.horizontalDistanceSqr()) {
+				return vec31.add(collideBoundingBox(this, new Vec3(0.0D, -vec31.y + motion.y, 0.0D), aabb.move(vec31), this.level, list));
+			}
+		}
+
+		return vec3;
+	}
+
+//	protected Vec3d getCollideRotate(Vec3 motion) {
+//		AABB aabb = this.getBoundingBox().move(motion);
+//
+//	}
+//
+//	protected Vec3d getBlockInsideOffset(Vec3 motion) {
+//		AABB aabb = this.getBoundingBox().move(motion);
+//
+//	}
 
 	protected boolean isOnLand() { // TODO
 		AABB aabb = this.getBoundingBox();
