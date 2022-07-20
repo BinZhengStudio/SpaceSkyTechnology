@@ -24,6 +24,7 @@ public class NetworkHandler {
 		register(PlaneEnginePowerPacket.class, PlaneEnginePowerPacket::new);
 		register(PlaneRotateSyncPacket.class, PlaneRotateSyncPacket::new);
 		register(PlaneRotateChangedPacket.class, PlaneRotateChangedPacket::new);
+		register(PlaneLaunchCannonballPacket.class, PlaneLaunchCannonballPacket::new);
 	}
 
 	private static <M extends CustomPacket> void register(Class<M> packet, Function<FriendlyByteBuf, M> decoder) {

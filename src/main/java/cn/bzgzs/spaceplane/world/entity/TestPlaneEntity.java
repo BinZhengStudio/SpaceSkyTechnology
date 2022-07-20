@@ -6,6 +6,7 @@ import cn.bzgzs.spaceplane.network.server.PlaneRotateSyncPacket;
 import cn.bzgzs.spaceplane.util.VecHelper;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.phys.Vec3d;
+import com.google.gson.Gson;
 import net.minecraft.BlockUtil;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -25,6 +26,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -40,6 +42,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class TestPlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
@@ -51,7 +54,6 @@ public class TestPlaneEntity extends Entity {
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> ENGINE_POWER = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	public static final int LANDING_GEAR_HEIGHT = 2;
-	private float outOfControlTicks;
 	private float zRot;
 	public float zRotO;
 	private float deltaPitch;
@@ -451,15 +453,6 @@ public class TestPlaneEntity extends Entity {
 	public void tick() {
 		this.oldStatus = this.status;
 		this.status = this.getStatus();
-		if (this.status != Status.UNDER_WATER) {
-			this.outOfControlTicks = 0.0F;
-		} else {
-			++this.outOfControlTicks;
-		}
-
-		if (!this.level.isClientSide && this.outOfControlTicks >= 60.0F) {
-			this.ejectPassengers();
-		}
 
 		super.tick();
 		this.tickLerpPos();
@@ -487,12 +480,23 @@ public class TestPlaneEntity extends Entity {
 					this.controlInAir();
 					this.inAirResistance();
 				}
+				case UNDER_WATER -> {
+					this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
+					this.setEngineState(false);
+					if (this.level.isClientSide) {
+						NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePacket(this.getEngineState()));
+					}
+				}
 				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
 			}
 			if (this.level.isClientSide && this.getEngineState()) {
 				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
 			}
 			this.move(MoverType.SELF, this.getDeltaMovement());
+			if (this.inputLaunchCannonball) {
+				NetworkHandler.INSTANCE.sendToServer(new PlaneLaunchCannonballPacket(true));
+				NetworkHandler.INSTANCE.sendToServer(new PlaneLaunchCannonballPacket(false));
+			}
 		} else {
 			this.setDeltaMovement(Vec3.ZERO);
 		}
@@ -597,12 +601,8 @@ public class TestPlaneEntity extends Entity {
 			double x = this.getX() + (this.lerpX - this.getX()) / (double) this.lerpPosSteps;
 			double y = this.getY() + (this.lerpY - this.getY()) / (double) this.lerpPosSteps;
 			double z = this.getZ() + (this.lerpZ - this.getZ()) / (double) this.lerpPosSteps;
-			double yaw = Mth.wrapDegrees(this.lerpYaw - (double) this.getYRot());
-			this.setXRot(this.getXRot() + (float) (this.lerpPitch - (double) this.getXRot()) / (float) this.lerpPosSteps);
-			this.setYRot(this.getYRot() + (float) yaw / (float) this.lerpPosSteps);
 			--this.lerpPosSteps;
 			this.setPos(x, y, z);
-			this.setRot(this.getYRot(), this.getXRot());
 		}
 	}
 
@@ -613,15 +613,14 @@ public class TestPlaneEntity extends Entity {
 		}
 
 		if (this.lerpRotateSteps > 0) {
-			double x = this.getX() + (this.lerpX - this.getX()) / (double) this.lerpRotateSteps;
-			double y = this.getY() + (this.lerpY - this.getY()) / (double) this.lerpRotateSteps;
-			double z = this.getZ() + (this.lerpZ - this.getZ()) / (double) this.lerpRotateSteps;
+			double pitch = Mth.wrapDegrees(this.lerpPitch - (double) this.getXRot());
 			double yaw = Mth.wrapDegrees(this.lerpYaw - (double) this.getYRot());
-			this.setXRot(this.getXRot() + (float) (this.lerpPitch - (double) this.getXRot()) / (float) this.lerpRotateSteps);
+			double roll = Mth.wrapDegrees(this.lerpRoll - (double) this.getZRot());
+			this.setXRot(this.getXRot() + (float) pitch / (float) this.lerpRotateSteps);
 			this.setYRot(this.getYRot() + (float) yaw / (float) this.lerpRotateSteps);
+			this.setZRot(this.getZRot() + (float) roll / (float) this.lerpRotateSteps);
 			--this.lerpRotateSteps;
-			this.setPos(x, y, z);
-			this.setRot(this.getYRot(), this.getXRot());
+			this.setRot(this.getXRot(), this.getYRot(), this.getZRot());
 		}
 	}
 
@@ -678,20 +677,20 @@ public class TestPlaneEntity extends Entity {
 				this.deltaYaw -= deltaRotate * Math.sin(this.getZRotRad());
 			}
 			if (this.inputLeftRoll) {
-				this.deltaYaw += deltaRotate * Math.abs(Math.sin(this.getXRotRad()));
-				this.deltaRoll -= deltaRotate * Math.abs(Math.cos(this.getXRotRad()));
+				this.deltaYaw += deltaRotate * Math.sin(this.getXRotRad());
+				this.deltaRoll -= deltaRotate * Math.cos(this.getXRotRad());
 			}
 			if (this.inputRightRoll) {
-				this.deltaYaw -= deltaRotate * Math.abs(Math.sin(this.getXRotRad()));
-				this.deltaRoll += deltaRotate * Math.abs(Math.cos(this.getXRotRad()));
+				this.deltaYaw -= deltaRotate * Math.sin(this.getXRotRad());
+				this.deltaRoll += deltaRotate * Math.cos(this.getXRotRad());
 			}
-			if (this.inputLeft) { // TODO
-				this.deltaPitch -= deltaRotate * Math.abs(Math.cos(this.getXRotRad())) * Math.sin(this.getZRotRad());
+			if (this.inputLeft) {
+				this.deltaPitch -= deltaRotate * Math.cos(this.getXRotRad()) * Math.sin(this.getZRotRad());
 				this.deltaYaw -= deltaRotate * Math.cos(this.getXRotRad()) * Math.cos(this.getZRotRad());
 				this.deltaRoll -= deltaRotate * Math.sin(this.getXRotRad());
 			}
 			if (this.inputRight) {
-				this.deltaPitch += deltaRotate * Math.abs(Math.cos(this.getXRotRad())) * Math.sin(this.getZRotRad());
+				this.deltaPitch += deltaRotate * Math.cos(this.getXRotRad()) * Math.sin(this.getZRotRad());
 				this.deltaYaw += deltaRotate * Math.cos(this.getXRotRad()) * Math.cos(this.getZRotRad());
 				this.deltaRoll += deltaRotate * Math.sin(this.getXRotRad());
 			}
@@ -712,6 +711,13 @@ public class TestPlaneEntity extends Entity {
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
+	public void launchCannonBall(boolean left) {
+//		if (this.cannonball > 0)
+		CannonballEntity cannonball = new CannonballEntity(this.level, this, left ? -28 : 28, -13, 0);
+		this.level.addFreshEntity(cannonball);
+//		this.cannonball--;
+	}
+
 	protected Vec3d getCenterPos() {
 		return new Vec3d(this.getX(), this.getY() + this.getEyeHeight(), this.getZ());
 	}
@@ -724,25 +730,25 @@ public class TestPlaneEntity extends Entity {
 	@Override
 	public void move(MoverType type, Vec3 motion) { // TODO
 		this.level.getProfiler().push("move");
-		Vec3 vec3 = this.collide(motion);
-		double d0 = vec3.lengthSqr();
+		Vec3 collideVec = this.collide(motion);
+		double d0 = collideVec.lengthSqr();
 		if (d0 > 1.0E-7D) {
-			this.setPos(this.getX() + vec3.x, this.getY() + vec3.y, this.getZ() + vec3.z);
+			this.setPos(this.getX() + collideVec.x, this.getY() + collideVec.y, this.getZ() + collideVec.z);
 		}
 		this.level.getProfiler().pop();
 
 		this.level.getProfiler().push("resetMotion");
-		boolean xCollide = !Mth.equal(motion.x, vec3.x);
-		boolean zCollide = !Mth.equal(motion.z, vec3.z);
+		boolean xCollide = !Mth.equal(motion.x, collideVec.x);
+		boolean zCollide = !Mth.equal(motion.z, collideVec.z);
 		this.horizontalCollision = xCollide || zCollide;
-		this.verticalCollision = motion.y != vec3.y;
+		this.verticalCollision = motion.y != collideVec.y;
 		this.verticalCollisionBelow = this.verticalCollision && motion.y < 0.0D;
 		if (this.isRemoved()) {
 			this.level.getProfiler().pop();
 		} else {
-			if (this.horizontalCollision) {
-				Vec3 vec31 = this.getDeltaMovement();
-				this.setDeltaMovement(xCollide ? 0.0D : vec31.x, vec31.y, zCollide ? 0.0D : vec31.z);
+			Vec3 vec31 = this.getDeltaMovement();
+			if (this.horizontalCollision || this.verticalCollision) {
+				this.setDeltaMovement(xCollide ? 0.0D : vec31.x, this.verticalCollision ? 0.0D : vec31.y, zCollide ? 0.0D : vec31.z);
 			}
 
 //			this.tryCheckInsideBlocks();
@@ -754,13 +760,28 @@ public class TestPlaneEntity extends Entity {
 
 	private Vec3 collide(Vec3 motion) {
 		Vec3 vec3 = motion;
+		List<PlanePart> yCollideParts = new ArrayList<>();
 		for (PlanePart part : this.parts) {
-			Vec3 collide = part.collide(motion);
+			Vec3 collide = part.collide(motion, yCollideParts);
 			if (vec3.lengthSqr() > collide.lengthSqr()) {
 				vec3 = collide;
 			}
 		}
+		for (PlanePart yCollidePart : yCollideParts) {
+			if (yCollidePart.isWheel()) { // TODO 等待测试
+				if (Math.abs(this.getXRot()) < 30.0F) this.deltaPitch -= this.getXRot();
+				if (Math.abs(this.getZRot()) < 30.0F || Math.abs(this.getZRot()) > 150.0F)
+					this.deltaRoll -= this.getZRot();
+			}
+		}
 		return vec3;
+	}
+
+	protected void explode() {
+//		this.level.explode(null, this.getX(), this.getY(), this.getZ(), this.entityData.get(FUEL), flag, flag ? Explosion.BlockInteraction.DESTROY : Explosion.BlockInteraction.NONE);
+//		this.dropItems();
+		this.level.explode(null, this.getX(), this.getY(), this.getZ(), 5.0F, true, Explosion.BlockInteraction.DESTROY);
+		this.discard();
 	}
 
 	public void changeEngineState() {
@@ -845,12 +866,7 @@ public class TestPlaneEntity extends Entity {
 		} else if (this.isAboveWater()) {
 			return Status.ABOVE_WATER;
 		} else {
-			Status status = this.onGroundStatus();
-			if (status != null) {
-				return status;
-			} else { // TODO
-				return Status.IN_AIR;
-			}
+			return Objects.requireNonNullElse(this.onGroundStatus(), Status.IN_AIR);
 		}
 	}
 
@@ -1070,7 +1086,7 @@ public class TestPlaneEntity extends Entity {
 			pitch = -pitch - 180.0F;
 		}
 		if (pitch > 90) {
-			flag  = true;
+			flag = true;
 			pitch = -pitch + 180.0F;
 		}
 		if (flag) {
@@ -1099,11 +1115,11 @@ public class TestPlaneEntity extends Entity {
 
 	@Override
 	protected void readAdditionalSaveData(CompoundTag tag) {
-		this.setEngineState(tag.getBoolean("EngineState"));
-		this.setLandingGear(tag.getBoolean("LandingGear"));
-		this.setTractor(tag.getBoolean("Tractor"));
-		this.setEnginePower(tag.getInt("EnginePower"));
-		this.setZRot(tag.getFloat("ZRot"));
+		if (tag.contains("EngineState")) this.setEngineState(tag.getBoolean("EngineState"));
+		if (tag.contains("LandingGear")) this.setLandingGear(tag.getBoolean("LandingGear"));
+		if (tag.contains("Tractor")) this.setTractor(tag.getBoolean("Tractor"));
+		if (tag.contains("EnginePower")) this.setEnginePower(tag.getInt("EnginePower"));
+		if (tag.contains("ZRot")) this.setZRot(tag.getFloat("ZRot"));
 	}
 
 	@Override
@@ -1126,14 +1142,12 @@ public class TestPlaneEntity extends Entity {
 				return InteractionResult.CONSUME;
 			}
 			return InteractionResult.PASS;
-		} else if (this.outOfControlTicks < 60.0F) {
+		} else {
 			if (!this.level.isClientSide) {
 				return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
 			} else {
 				return InteractionResult.SUCCESS;
 			}
-		} else {
-			return InteractionResult.PASS;
 		}
 	}
 

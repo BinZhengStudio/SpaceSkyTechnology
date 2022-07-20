@@ -209,21 +209,6 @@ public class TestPlaneModel extends EntityModel<TestPlaneEntity> {
 
 	@Override
 	public void setupAnim(TestPlaneEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-		this.body.xRot = headPitch;
-		this.body.yRot = netHeadYaw;
-		this.body.zRot = limbSwing;
-
-		this.wing.xRot = headPitch;
-		this.wing.yRot = netHeadYaw;
-		this.wing.zRot = limbSwing;
-
-		this.engine1.xRot = headPitch;
-		this.engine1.yRot = netHeadYaw;
-		this.engine1.zRot = limbSwing;
-
-		this.engine2.xRot = headPitch;
-		this.engine2.yRot = netHeadYaw;
-		this.engine2.zRot = limbSwing;
 	}
 
 	@Override
