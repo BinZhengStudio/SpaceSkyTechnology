@@ -22,6 +22,14 @@
   "item.spaceplane.rhenium_axe": "Rhenium Axe",
   "item.spaceplane.nickel_axe": "Nickel Axe",
   "item.spaceplane.tractor": "Tractor",
+  "item.spaceplane.bz_logo": "BinZheng Studio",
+
+  "itemTooltip.spaceplane.bz_logo.1":"The BinZheng Studio's 2nd Anniversary Work",
+  "itemTooltip.spaceplane.bz_logo.2":"Threebody-Space&SkyTechnology",
+  "itemTooltip.spaceplane.bz_logo.3": "It is our third year to participate in TeaCon",
+  "itemTooltip.spaceplane.bz_logo.4": "Wish that you can continue to support us",
+  "itemTooltip.spaceplane.bz_logo.5": "Welcome to our website[bzgzs.com]",
+  "itemTooltip.spaceplane.bz_logo.6": "Chinese/English/Classic Chineseのサポート",
 
   "container.spaceplane.steam_engine": "Steam Engine",
 
