@@ -6,7 +6,6 @@ import cn.bzgzs.spaceplane.network.server.PlaneRotateSyncPacket;
 import cn.bzgzs.spaceplane.util.VecHelper;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.phys.Vec3d;
-import com.google.gson.Gson;
 import net.minecraft.BlockUtil;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -53,7 +52,7 @@ public class TestPlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> TRACTOR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> ENGINE_POWER = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
-	public static final int LANDING_GEAR_HEIGHT = 2;
+	public static final int TOTAL_FIRE_TIME = 5;
 	private float zRot;
 	public float zRotO;
 	private float deltaPitch;
@@ -81,6 +80,8 @@ public class TestPlaneEntity extends Entity {
 	private boolean inputLaunchMissile;
 	private boolean inputInterceptorMissile;
 	private boolean inputLaunchCannonball;
+	private int fireTimeLeft;
+	private int fireTimeRight;
 	private int inWaterParts;
 	private TestPlaneEntity.Status status;
 	private TestPlaneEntity.Status oldStatus;
@@ -489,14 +490,16 @@ public class TestPlaneEntity extends Entity {
 				}
 				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
 			}
-			if (this.level.isClientSide && this.getEngineState()) {
-				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
+			if (this.level.isClientSide) {
+				if (this.inputLaunchCannonball) {
+					NetworkHandler.INSTANCE.sendToServer(new PlaneLaunchCannonballPacket(true, this));
+					NetworkHandler.INSTANCE.sendToServer(new PlaneLaunchCannonballPacket(false, this));
+				}
+				if (this.getEngineState()) {
+					this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
+				}
 			}
 			this.move(MoverType.SELF, this.getDeltaMovement());
-			if (this.inputLaunchCannonball) {
-				NetworkHandler.INSTANCE.sendToServer(new PlaneLaunchCannonballPacket(true));
-				NetworkHandler.INSTANCE.sendToServer(new PlaneLaunchCannonballPacket(false));
-			}
 		} else {
 			this.setDeltaMovement(Vec3.ZERO);
 		}
@@ -517,6 +520,12 @@ public class TestPlaneEntity extends Entity {
 		}
 
 		if (!this.level.isClientSide) {
+			if (this.fireTimeLeft > 0) {
+				--this.fireTimeLeft;
+			}
+			if (this.fireTimeRight > 0) {
+				--this.fireTimeRight;
+			}
 			List<ServerPlayer> players = ((ServerLevel) this.level).getPlayers((predicate) -> true);
 			players.forEach((player) -> NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PlaneRotateSyncPacket(this)));
 		}
@@ -711,10 +720,18 @@ public class TestPlaneEntity extends Entity {
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
-	public void launchCannonBall(boolean left) {
+	public void launchCannonBall(boolean left, Vec3 initialSpeed, float pitch, float yaw, float roll) {
 //		if (this.cannonball > 0)
-		CannonballEntity cannonball = new CannonballEntity(this.level, this, left ? -28 : 28, -13, 0);
-		this.level.addFreshEntity(cannonball);
+		if (left && this.fireTimeLeft <= 0) {
+			CannonballEntity cannonball = new CannonballEntity(this.level, this, -28, -13, 0, initialSpeed, pitch, yaw, roll);
+			this.level.addFreshEntity(cannonball);
+			this.fireTimeLeft = TOTAL_FIRE_TIME;
+		}
+		if (!left && this.fireTimeRight <= 0) {
+			CannonballEntity cannonball = new CannonballEntity(this.level, this, 28, -13, 0, initialSpeed, pitch, yaw, roll);
+			this.level.addFreshEntity(cannonball);
+			this.fireTimeRight = TOTAL_FIRE_TIME;
+		}
 //		this.cannonball--;
 	}
 
@@ -1021,6 +1038,17 @@ public class TestPlaneEntity extends Entity {
 		entityToUpdate.yRotO += yaw1 - yaw;
 		entityToUpdate.setYRot(entityToUpdate.getYRot() + yaw1 - yaw);
 		entityToUpdate.setYHeadRot(entityToUpdate.getYRot());
+	}
+
+	@Override
+	public boolean shouldRenderAtSqrDistance(double distance) {
+		double d0 = this.getBoundingBox().getSize() * 4.0D;
+		if (Double.isNaN(d0)) {
+			d0 = 4.0D;
+		}
+
+		d0 *= 64.0D;
+		return distance < d0 * d0;
 	}
 
 	@Override

@@ -21,10 +21,10 @@ public class PlaneRotateChangedPacket extends CustomPacket {
 		this.roll = buf.readFloat();
 	}
 
-	public PlaneRotateChangedPacket(TestPlaneEntity entity) {
-		this.pitch = entity.getXRot();
-		this.yaw = entity.getYRot();
-		this.roll = entity.getZRot();
+	public PlaneRotateChangedPacket(TestPlaneEntity plane) {
+		this.pitch = plane.getXRot();
+		this.yaw = plane.getYRot();
+		this.roll = plane.getZRot();
 	}
 
 	@Override

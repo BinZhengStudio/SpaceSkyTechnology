@@ -34,7 +34,6 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 	private TestPlaneEntity cachedOwner;
 	private static final int TOTAL_FIRE_TIME = 100;
 	private int fireTime;
-	private boolean impacted = false;
 	private boolean leftOwner;
 	private boolean hasBeenShot = false;
 	private double speedX;
@@ -45,11 +44,11 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 		super(entityType, world);
 	}
 
-	public CannonballEntity(Level world, TestPlaneEntity plane, int pixelX, int pixelY, int pixelZ) {
+	public CannonballEntity(Level world, TestPlaneEntity plane, int pixelX, int pixelY, int pixelZ, Vec3 initialSpeed, float pitch, float yaw, float roll) {
 		super(EntityTypeList.CANNONBALL.get(), world);
 		Vec3d pointVec = new Vec3d(pixelX / 16.0D, pixelY / 16.0D, pixelZ / 16.0D);
-		Vec3d offset = pointVec.zRot(-plane.getZRotRad()).xRot(plane.getXRotRad()).yRot(plane.getYRotRad());
-		Vec3d yOffset = new Vec3d(0.0D, -this.getDimensions(this.getPose()).height / 2, 0.0D).xRot(plane.getXRotRad()).yRot(plane.getYRotRad());
+		Vec3d offset = pointVec.zRot(-Math.toRadians(roll)).xRot(Math.toRadians(pitch)).yRot(-Math.toRadians(yaw));
+		Vec3d yOffset = new Vec3d(0.0D, -this.getDimensions(this.getPose()).height / 2, 0.0D).xRot(Math.toRadians(pitch)).yRot(-Math.toRadians(yaw));
 		this.setPos(plane.getCenterPos().add(offset).add(yOffset));
 		this.xo = this.getX();
 		this.yo = this.getY();
@@ -57,10 +56,10 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 		this.xOld = this.xo;
 		this.yOld = this.yo;
 		this.zOld = this.zo;
-		this.speedX = plane.getDeltaMovement().x;
-		this.speedY = plane.getDeltaMovement().y;
-		this.speedZ = plane.getDeltaMovement().z;
-		this.setRot(plane.getYRot(), plane.getXRot());
+		this.speedX = initialSpeed.x;
+		this.speedY = initialSpeed.y;
+		this.speedZ = initialSpeed.z;
+		this.setRot(yaw, pitch);
 		this.setOwner(plane);
 	}
 
@@ -91,14 +90,14 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	@Override
-	public boolean shouldRenderAtSqrDistance(double pDistance) {
+	public boolean shouldRenderAtSqrDistance(double distance) {
 		double d0 = this.getBoundingBox().getSize() * 4.0D;
 		if (Double.isNaN(d0)) {
 			d0 = 4.0D;
 		}
 
 		d0 *= 64.0D;
-		return pDistance < d0 * d0;
+		return distance < d0 * d0;
 	}
 
 	@Override
@@ -207,17 +206,17 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 	protected void onHitEntity(EntityHitResult result) {
 		if (!this.level.isClientSide) {
 			result.getEntity().hurt(DamageSource.explosion((Explosion) null), 8.0F);
-			if (result.getEntity() instanceof TestPlaneEntity plane) {
-				plane.explode();
-			} else if (result.getEntity() instanceof PlanePart part) {
-				part.getParent().explode();
+			if (result.getEntity() instanceof PlanePart part) {
+				if (!(this.getOwner() != null && part.is(this.getOwner()))) {
+					part.getParent().explode();
+				}
 			}
 		}
 	}
 
 	protected void selfDestruct() {
 		boolean flag = ForgeEventFactory.getMobGriefingEvent(this.level, this.getOwner());
-		this.level.explode(null, this.getX(), this.getY(), this.getZ(), 2.0F, false, flag ? Explosion.BlockInteraction.DESTROY : Explosion.BlockInteraction.NONE);
+		this.level.explode(null, this.getX(), this.getY(), this.getZ(), 3.0F /* TODO */, false, flag ? Explosion.BlockInteraction.DESTROY : Explosion.BlockInteraction.NONE);
 		this.discard();
 	}
 
