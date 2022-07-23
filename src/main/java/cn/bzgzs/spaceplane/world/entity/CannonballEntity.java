@@ -31,7 +31,7 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 	@Nullable
 	private UUID ownerUUID;
 	@Nullable
-	private TestPlaneEntity cachedOwner;
+	private BasePlaneEntity cachedOwner;
 	private static final int TOTAL_FIRE_TIME = 100;
 	private int fireTime;
 	private boolean leftOwner;
@@ -44,7 +44,7 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 		super(entityType, world);
 	}
 
-	public CannonballEntity(Level world, TestPlaneEntity plane, int pixelX, int pixelY, int pixelZ, Vec3 initialSpeed, float pitch, float yaw, float roll) {
+	public CannonballEntity(Level world, BasePlaneEntity plane, int pixelX, int pixelY, int pixelZ, Vec3 initialSpeed, float pitch, float yaw, float roll) {
 		super(EntityTypeList.CANNONBALL.get(), world);
 		Vec3d pointVec = new Vec3d(pixelX / 16.0D, pixelY / 16.0D, pixelZ / 16.0D);
 		Vec3d offset = pointVec.zRot(-Math.toRadians(roll)).xRot(Math.toRadians(pitch)).yRot(-Math.toRadians(yaw));
@@ -68,7 +68,7 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 		return 0.5F;
 	}
 
-	public void setOwner(@Nullable TestPlaneEntity entity) {
+	public void setOwner(@Nullable BasePlaneEntity entity) {
 		if (entity != null) {
 			this.ownerUUID = entity.getUUID();
 			this.cachedOwner = entity;
@@ -76,11 +76,11 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 	}
 
 	@Nullable
-	public TestPlaneEntity getOwner() {
+	public BasePlaneEntity getOwner() {
 		if (this.cachedOwner != null && !this.cachedOwner.isRemoved()) {
 			return this.cachedOwner;
 		} else if (this.ownerUUID != null && this.level instanceof ServerLevel serverLevel) {
-			if (serverLevel.getEntity(this.ownerUUID) instanceof TestPlaneEntity plane) {
+			if (serverLevel.getEntity(this.ownerUUID) instanceof BasePlaneEntity plane) {
 				this.cachedOwner = plane;
 			}
 			return this.cachedOwner;
@@ -237,7 +237,7 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 		if (!entity.isSpectator() && entity.isAlive() && entity.isPickable()) {
 			Entity owner = this.getOwner();
 			boolean flag = owner == null || this.leftOwner || !owner.isPassengerOfSameVehicle(entity);
-			return flag && (entity.noPhysics || entity instanceof PlanePart) && !(entity instanceof TestPlaneEntity);
+			return flag && (entity.noPhysics || entity instanceof PlanePart) && !(entity instanceof BasePlaneEntity);
 		} else {
 			return false;
 		}
@@ -267,7 +267,7 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 		super.recreateFromPacket(packet);
 		Entity entity = this.level.getEntity(packet.getData());
 		if (entity != null) {
-			if (entity instanceof TestPlaneEntity plane) this.setOwner(plane);
+			if (entity instanceof BasePlaneEntity plane) this.setOwner(plane);
 		}
 	}
 

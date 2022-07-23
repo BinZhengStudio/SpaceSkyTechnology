@@ -1,7 +1,7 @@
 package cn.bzgzs.spaceplane.network.client;
 
 import cn.bzgzs.spaceplane.network.CustomPacket;
-import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
+import cn.bzgzs.spaceplane.world.entity.BasePlaneEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -28,7 +28,7 @@ public class PlaneLaunchCannonballPacket extends CustomPacket {
 		this.roll = buf.readFloat();
 	}
 
-	public PlaneLaunchCannonballPacket(boolean left, TestPlaneEntity plane) {
+	public PlaneLaunchCannonballPacket(boolean left, BasePlaneEntity plane) {
 		this.left = left;
 		this.speedX = plane.getDeltaMovement().x;
 		this.speedY = plane.getDeltaMovement().y;
@@ -54,7 +54,7 @@ public class PlaneLaunchCannonballPacket extends CustomPacket {
 		context.get().enqueueWork(() -> {
 			ServerPlayer sender = context.get().getSender();
 			if (sender != null) {
-				if (sender.getVehicle() instanceof TestPlaneEntity plane) {
+				if (sender.getVehicle() instanceof BasePlaneEntity plane) {
 					plane.launchCannonBall(this.left, new Vec3(this.speedX, this.speedY, this.speedZ), this.pitch, this.yaw, this.roll);
 				}
 			} else {
