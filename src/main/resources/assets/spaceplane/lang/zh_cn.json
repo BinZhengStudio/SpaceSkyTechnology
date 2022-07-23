@@ -42,7 +42,23 @@
 
   "key.category.spaceplane.plane_control" : "飞机控制",
 
-  "key.spaceplane.engine_on": "引擎开启",
-  "key.spaceplane.climb_up" : "爬升",
-  "key.spaceplane.decline" : "下降"
+  "key.spaceplane.engine_on": "启动引擎",
+  "key.spaceplane.plane_climb_up" : "爬升",
+  "key.spaceplane.plane_decline" : "下降",
+  "key.spaceplane.landing_gear" : "收起/放下起落架",
+  "key.spaceplane.plane_speed_up" : "加速",
+  "key.spaceplane.plane_look_up" : "战机抬头",
+  "key.spaceplane.plane_look_down" : "战机低头",
+  "key.spaceplane.plane_left_roll" : "向左滚动",
+  "key.spaceplane.plane_right_roll" :"向右滚动",
+  "key.spaceplane.plane_left" : "左转",
+  "key.spaceplane.plane_look_right" : "右转",
+  "key.spaceplane.launch_cannonball" : "Fa♂射炮弹",
+  "key.spaceplane.launch_missile" : "Fa♂射导弹",
+  "key.spaceplane.separate_tractor" : "分离牵引器",
+  "key.spaceplane.interceptor_missile" : "拦截导弹"
+
+
+
+
 }

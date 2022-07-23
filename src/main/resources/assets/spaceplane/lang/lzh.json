@@ -38,5 +38,22 @@
   "label.steam_engine.power": "功率(TE/s):",
   "label.steam_engine.water_amount": "水(mB):",
 
-  "key.category.spaceplane.plane_control" : "飛控"
+  "key.category.spaceplane.plane_control" : "飛控",
+
+  "key.spaceplane.engine_on": "發擎",
+  "key.spaceplane.plane_climb_up" : "爬而升",
+  "key.spaceplane.plane_decline" : "降",
+  "key.spaceplane.landing_gear" : "收/放起落之架",
+  "key.spaceplane.plane_speed_up" : "速",
+  "key.spaceplane.plane_look_up" : "機抬",
+  "key.spaceplane.plane_look_down" : "機俯",
+  "key.spaceplane.plane_left_roll" : "左滚",
+  "key.spaceplane.plane_right_roll" :"右滚",
+  "key.spaceplane.plane_left" : "左",
+  "key.spaceplane.plane_look_right" : "右",
+  "key.spaceplane.launch_cannonball" : "發彈",
+  "key.spaceplane.launch_missile" : "發追蹤彈",
+  "key.spaceplane.separate_tractor" : "離牽者",
+  "key.spaceplane.interceptor_missile" : "攔彈"
+
 }
