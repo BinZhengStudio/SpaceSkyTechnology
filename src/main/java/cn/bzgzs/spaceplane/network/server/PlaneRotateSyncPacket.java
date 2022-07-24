@@ -1,7 +1,7 @@
 package cn.bzgzs.spaceplane.network.server;
 
 import cn.bzgzs.spaceplane.network.CustomPacket;
-import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
+import cn.bzgzs.spaceplane.world.entity.BasePlaneEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,7 +22,7 @@ public class PlaneRotateSyncPacket extends CustomPacket {
 		this.roll = buf.readFloat();
 	}
 
-	public PlaneRotateSyncPacket(TestPlaneEntity entity) {
+	public PlaneRotateSyncPacket(BasePlaneEntity entity) {
 		this.entity = entity.getId();
 		this.pitch = entity.getXRot();
 		this.yaw = entity.getYRot();
@@ -42,7 +42,7 @@ public class PlaneRotateSyncPacket extends CustomPacket {
 		context.get().enqueueWork(() -> {
 			ClientLevel level = Minecraft.getInstance().level;
 			if (level != null) {
-				if (level.getEntity(this.entity) instanceof TestPlaneEntity plane) {
+				if (level.getEntity(this.entity) instanceof BasePlaneEntity plane) {
 					plane.lerpRotate(this.pitch, this.yaw, this.roll);
 				}
 			} else {

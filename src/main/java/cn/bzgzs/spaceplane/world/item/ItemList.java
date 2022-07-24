@@ -21,7 +21,7 @@ public class ItemList {
 	public static final RegistryObject<Item> RHENIUM_AXE = ITEMS.register("rhenium_axe",() -> new AxeItem(TierList.RHENIUM,-3,-1.0F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<Item> NICKEL_AXE = ITEMS.register("nickel_axe",() -> new AxeItem(TierList.NICKEL,-3,-1.0F,new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<Item> TRACTOR = ITEMS.register("tractor", () -> new Item(new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
-	public static final RegistryObject<Item> BZ_LOGO = ITEMS.register("bz_logo", () -> new Item(new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
+	public static final RegistryObject<Item> BZ_LOGO = ITEMS.register("bz_logo", BzLogo::new);
 	// vvvbbbcz:方块的物品形态注册
 	public static final RegistryObject<BlockItem> RHENIUM_ORE = ITEMS.register("rhenium_ore", () -> new BlockItem(BlockList.RHENIUM_ORE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
 	public static final RegistryObject<BlockItem> DEEPSLATE_RHENIUM_ORE = ITEMS.register("deepslate_rhenium_ore", () -> new BlockItem(BlockList.DEEPSLATE_RHENIUM_ORE.get(), new Item.Properties().tab(CreativeModeTabList.TAB_SPACEPLANE)));
