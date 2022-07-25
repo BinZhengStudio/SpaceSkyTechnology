@@ -8,6 +8,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -17,6 +18,7 @@ import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.entity.PartEntity;
+import org.checkerframework.common.returnsreceiver.qual.This;
 
 import java.util.List;
 
@@ -70,15 +72,46 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 		return collideVec;
 	}
 
-//	protected Vec3d getCollideRotate(Vec3 motion) {
-//		AABB aabb = this.getBoundingBox().move(motion);
-//
-//	}
-//
-//	protected Vec3d getBlockInsideOffset(Vec3 motion) {
-//		AABB aabb = this.getBoundingBox().move(motion);
-//
-//	}
+	protected void pushEntities(List<Entity> pushedEntities) {
+		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
+		if (!list.isEmpty()) {
+			for (Entity entity : list) {
+				if (!entity.noPhysics && !pushedEntities.contains(entity)) {
+					this.push(entity);
+					pushedEntities.addAll(list);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void push(Entity entity) {
+		if (!entity.noPhysics) {
+			double x = entity.getX() - this.getX();
+			double y = entity.getY() - this.getY();
+			double z = entity.getZ() - this.getZ();
+			double absMax = Mth.absMax(Mth.absMax(x, z), y);
+			if (absMax >= 0.01D) {
+				absMax = Math.sqrt(absMax);
+				x /= absMax;
+				y /= absMax;
+				z /= absMax;
+				double d3 = 1.0D / absMax;
+				if (d3 > 1.0D) {
+					d3 = 1.0D;
+				}
+
+				x *= d3;
+				y *= d3;
+				z *= d3;
+				x *= 0.05D;
+				y *= 0.05D;
+				z *= 0.05D;
+
+				entity.push(x, y, z);
+			}
+		}
+	}
 
 	protected boolean isOnLand() { // TODO
 		AABB aabb = this.getBoundingBox();
