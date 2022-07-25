@@ -8,6 +8,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class PlaneRotateChangedPacket extends CustomPacket {
@@ -36,16 +37,13 @@ public class PlaneRotateChangedPacket extends CustomPacket {
 
 	@Override
 	public void consumer(Supplier<NetworkEvent.Context> context) {
-		context.get().enqueueWork(() -> {
-			ServerPlayer sender = context.get().getSender();
-			if (sender != null) {
-				if (sender.getVehicle() instanceof BasePlaneEntity plane) {
-					plane.setRot(this.pitch, this.yaw, this.roll);
-				}
-			} else {
-				throw new NullPointerException("Fuck! Sender is NULL!");
+		context.get().enqueueWork(() -> Optional.ofNullable(context.get().getSender()).ifPresentOrElse(serverPlayer -> {
+			if (serverPlayer.getVehicle() instanceof BasePlaneEntity plane) {
+				plane.setRot(this.pitch, this.yaw, this.roll);
 			}
-		});
+		}, () -> {
+			throw new NullPointerException("Fuck! Sender is NULL!");
+		}));
 		context.get().setPacketHandled(true);
 	}
 }

@@ -6,6 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class PlaneEnginePacket extends CustomPacket {
@@ -26,16 +27,13 @@ public class PlaneEnginePacket extends CustomPacket {
 
 	@Override
 	public void consumer(Supplier<NetworkEvent.Context> context) {
-		context.get().enqueueWork(() -> {
-			ServerPlayer sender = context.get().getSender();
-			if (sender != null) {
-				if (sender.getVehicle() instanceof TestPlaneEntity plane) {
-					plane.setEngineState(this.engineOn);
-				}
-			} else {
-				throw new NullPointerException("Fuck! Sender is NULL!");
+		context.get().enqueueWork(() -> Optional.ofNullable(context.get().getSender()).ifPresentOrElse(serverPlayer -> {
+			if (serverPlayer.getVehicle() instanceof TestPlaneEntity plane) {
+				plane.setEngineState(this.engineOn);
 			}
-		});
+		}, () -> {
+			throw new NullPointerException("Fuck! Sender is NULL!");
+		}));
 		context.get().setPacketHandled(true);
 	}
 }

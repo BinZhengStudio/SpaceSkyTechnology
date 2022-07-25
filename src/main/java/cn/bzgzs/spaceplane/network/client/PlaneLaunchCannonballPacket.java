@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class PlaneLaunchCannonballPacket extends CustomPacket {
@@ -52,14 +53,13 @@ public class PlaneLaunchCannonballPacket extends CustomPacket {
 	@Override
 	public void consumer(Supplier<NetworkEvent.Context> context) {
 		context.get().enqueueWork(() -> {
-			ServerPlayer sender = context.get().getSender();
-			if (sender != null) {
-				if (sender.getVehicle() instanceof BasePlaneEntity plane) {
+			Optional.ofNullable(context.get().getSender()).ifPresentOrElse(serverPlayer -> {
+				if (serverPlayer.getVehicle() instanceof BasePlaneEntity plane) {
 					plane.launchCannonBall(this.left, new Vec3(this.speedX, this.speedY, this.speedZ), this.pitch, this.yaw, this.roll);
 				}
-			} else {
+			}, () -> {
 				throw new NullPointerException("Fuck! Sender is NULL!");
-			}
+			});
 		});
 		context.get().setPacketHandled(true);
 	}

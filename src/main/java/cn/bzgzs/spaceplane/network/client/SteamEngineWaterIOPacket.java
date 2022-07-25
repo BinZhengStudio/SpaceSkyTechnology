@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class SteamEngineWaterIOPacket extends CustomPacket {
@@ -37,19 +38,16 @@ public class SteamEngineWaterIOPacket extends CustomPacket {
 
 	@Override
 	public void consumer(Supplier<NetworkEvent.Context> context) {
-		context.get().enqueueWork(() -> {
-			ServerPlayer sender = context.get().getSender();
-			if (sender != null) {
-				Level level = sender.getLevel();
-				if (level.isLoaded(pos)) { // 检查当前BlockPos是否已加载，防止Waiting For Server，TODO 可能要服务端优化
-					if (level.getBlockEntity(pos) instanceof SteamEngineBlockEntity blockEntity) blockEntity.waterUseBucketIO(this.isPourIn, this.amount);
-				} else {
-					SpacePlane.LOGGER.error("FUCK YOU! Don't try to WAITING FOR SERVER the TeaCon!");
-				}
+		context.get().enqueueWork(() -> Optional.ofNullable(context.get().getSender()).ifPresentOrElse(serverPlayer -> {
+			Level level = serverPlayer.getLevel();
+			if (level.isLoaded(pos)) { // 检查当前BlockPos是否已加载，防止Waiting For Server，TODO 可能要服务端优化
+				if (level.getBlockEntity(pos) instanceof SteamEngineBlockEntity blockEntity) blockEntity.waterUseBucketIO(this.isPourIn, this.amount);
 			} else {
-				throw new NullPointerException("Fuck! Sender is NULL!");
+				SpacePlane.LOGGER.error("FUCK YOU! Don't try to WAITING FOR SERVER the TeaCon!");
 			}
-		});
+		}, () -> {
+			throw new NullPointerException("Fuck! Sender is NULL!");
+		}));
 		context.get().setPacketHandled(true);
 	}
 }

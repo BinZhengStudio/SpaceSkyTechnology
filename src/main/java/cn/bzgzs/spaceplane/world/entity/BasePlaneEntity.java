@@ -7,6 +7,7 @@ import cn.bzgzs.spaceplane.sounds.SoundEventList;
 import cn.bzgzs.spaceplane.util.VecHelper;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.phys.Vec3d;
+import com.google.common.collect.Lists;
 import net.minecraft.BlockUtil;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -25,6 +26,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
@@ -54,6 +56,7 @@ public abstract class BasePlaneEntity extends Entity {
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> ENGINE_POWER = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	public static final int TOTAL_FIRE_TIME = 5;
+	private int enginePower; // TODO
 	private float zRot;
 	public float zRotO;
 	private float deltaPitch;
@@ -194,17 +197,6 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	@Override
-	public void push(Entity entity) { // TODO
-		if (entity instanceof BasePlaneEntity) {
-			if (entity.getBoundingBox().minY < this.getBoundingBox().maxY) {
-				super.push(entity);
-			}
-		} else if (entity.getBoundingBox().minY <= this.getBoundingBox().minY) {
-			super.push(entity);
-		}
-	}
-
-	@Override
 	public boolean isPickable() {
 		return !this.isRemoved();
 	}
@@ -305,20 +297,29 @@ public abstract class BasePlaneEntity extends Entity {
 			if (this.fireTimeRight > 0) {
 				--this.fireTimeRight;
 			}
-//			this.playSound(SoundEventList.PLANE_ENGINE.get(), 1.0F, 1.0F); TODO 声音未完善
+			this.playSound(SoundEventList.PLANE_ENGINE.get(), this.getEnginePower() / 100.0F, this.getEnginePower() / 100.0F * 2.0F); // TODO 声音未完善
 			List<ServerPlayer> players = ((ServerLevel) this.level).getPlayers((predicate) -> true);
-			players.forEach((player) -> NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PlaneRotateSyncPacket(this)));
+			players.forEach((player) -> {
+				if (player != this.getControllingPassenger()) {
+					NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PlaneRotateSyncPacket(this));
+				}
+			});
 		}
 
-		this.parts.forEach(part -> part.updatePos(true)); // TODO collision
+		List<Entity> pushedEntities = new ArrayList<>();
+		for (PlanePart part : this.parts) {
+			part.updatePos(this.isAABBCollided());
+			part.pushEntities(pushedEntities);
+		}
 
-//		this.checkInsideBlocks();
-		// 推动实体。TODO 以后要重写
-		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
-		if (!list.isEmpty()) {
-			for (Entity entity : list) {
-				if (!entity.hasPassenger(this)) {
-					this.push(entity);
+		for (Entity entity : pushedEntities) {
+			Vec3 motion = entity.getDeltaMovement();
+			double lengthSqr = this.getDeltaMovement().add(-motion.x, -motion.y, -motion.z).lengthSqr();
+			if (lengthSqr > 1.0D) {
+				if (lengthSqr > 2.25D && entity instanceof BasePlaneEntity plane) {
+					plane.explode();
+				} else {
+					entity.hurt(DamageSource.FLY_INTO_WALL, (float) lengthSqr);
 				}
 			}
 		}
@@ -531,6 +532,9 @@ public abstract class BasePlaneEntity extends Entity {
 		if (d0 > 1.0E-7D) {
 			this.setPos(this.getX() + collideVec.x, this.getY() + collideVec.y, this.getZ() + collideVec.z);
 		}
+		if (collideVec.add(-motion.x, -motion.y, -motion.z).lengthSqr() > 1.0D) {
+//			this.explode(); // TODO wait for test
+		}
 		this.level.getProfiler().pop();
 
 		this.level.getProfiler().push("resetMotion");
@@ -664,6 +668,14 @@ public abstract class BasePlaneEntity extends Entity {
 		} else {
 			return Objects.requireNonNullElse(this.onGroundStatus(), Status.IN_AIR);
 		}
+	}
+
+	private boolean isAABBCollided() {
+		AABB aabb = this.getBoundingBox();
+		List<VoxelShape> list = this.level.getEntityCollisions(this, aabb.expandTowards(this.getDeltaMovement()));
+		List<Entity> entities = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
+//		return !list.isEmpty() || !entities.isEmpty();
+		return true;
 	}
 
 	private Status onGroundStatus() {
@@ -817,6 +829,36 @@ public abstract class BasePlaneEntity extends Entity {
 		entityToUpdate.yRotO += yaw1 - yaw;
 		entityToUpdate.setYRot(entityToUpdate.getYRot() + yaw1 - yaw);
 		entityToUpdate.setYHeadRot(entityToUpdate.getYRot());
+	}
+
+	public Vec3 getDismountLocationForPassenger(LivingEntity entity) { // TODO
+		Vec3 vec3 = getCollisionHorizontalEscapeVector(this.getBbWidth() * Mth.SQRT_OF_TWO, entity.getBbWidth(), entity.getYRot());
+		double d0 = this.getX() + vec3.x;
+		double d1 = this.getZ() + vec3.z;
+		BlockPos pos = new BlockPos(d0, this.getBoundingBox().maxY, d1);
+		BlockPos below = pos.below();
+		if (!this.level.isWaterAt(below)) {
+			List<Vec3> list = Lists.newArrayList();
+			double d2 = this.level.getBlockFloorHeight(pos);
+			if (DismountHelper.isBlockFloorValid(d2)) {
+				list.add(new Vec3(d0, (double)pos.getY() + d2, d1));
+			}
+
+			double d3 = this.level.getBlockFloorHeight(below);
+			if (DismountHelper.isBlockFloorValid(d3)) {
+				list.add(new Vec3(d0, (double)below.getY() + d3, d1));
+			}
+
+			for(Pose pose : entity.getDismountPoses()) {
+				for(Vec3 vec31 : list) {
+					if (DismountHelper.canDismountTo(this.level, vec31, entity, pose)) {
+						entity.setPose(pose);
+						return vec31;
+					}
+				}
+			}
+		}
+		return super.getDismountLocationForPassenger(entity);
 	}
 
 	@Override
