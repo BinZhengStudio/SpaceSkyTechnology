@@ -2,6 +2,7 @@ package cn.bzgzs.spaceplane.world.entity;
 
 import cn.bzgzs.spaceplane.network.NetworkHandler;
 import cn.bzgzs.spaceplane.network.client.*;
+import cn.bzgzs.spaceplane.network.server.PlaneEnginePowerSyncPacket;
 import cn.bzgzs.spaceplane.network.server.PlaneRotateSyncPacket;
 import cn.bzgzs.spaceplane.sounds.SoundEventList;
 import cn.bzgzs.spaceplane.util.VecHelper;
@@ -45,18 +46,15 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public abstract class BasePlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	private static final EntityDataAccessor<Boolean> SPEED_UP = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	private static final EntityDataAccessor<Boolean> LEFT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	private static final EntityDataAccessor<Boolean> RIGHT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> LANDING_GEAR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> TRACTOR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
-	private static final EntityDataAccessor<Integer> ENGINE_POWER = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	public static final int TOTAL_FIRE_TIME = 5;
-	private int enginePower; // TODO
+	private int enginePower;
 	private float zRot;
 	public float zRotO;
 	private float deltaPitch;
@@ -155,13 +153,9 @@ public abstract class BasePlaneEntity extends Entity {
 	@Override
 	protected void defineSynchedData() {
 		this.entityData.define(ENGINE_ON, false);
-		this.entityData.define(SPEED_UP, false);
-		this.entityData.define(LEFT, false);
-		this.entityData.define(RIGHT, false);
 		this.entityData.define(LANDING_GEAR, true);
 		this.entityData.define(TRACTOR, false);
 		this.entityData.define(FUEL, 0); // 燃油量，单位mB
-		this.entityData.define(ENGINE_POWER, 0);
 	}
 
 	@Nullable
@@ -192,7 +186,7 @@ public abstract class BasePlaneEntity extends Entity {
 		return false;
 	}
 
-	public boolean hurt(PlanePart part, DamageSource source, float amount) { // TODO
+	public boolean hurt(PlanePart part, DamageSource source, float amount) {
 		return false;
 	}
 
@@ -297,18 +291,24 @@ public abstract class BasePlaneEntity extends Entity {
 			if (this.fireTimeRight > 0) {
 				--this.fireTimeRight;
 			}
-			this.playSound(SoundEventList.PLANE_ENGINE.get(), this.getEnginePower() / 100.0F, this.getEnginePower() / 100.0F * 2.0F); // TODO 声音未完善
+			if (this.getControllingPassenger() == null) {
+				if (this.getEnginePower() > 0) {
+					this.setEnginePower(Math.max(this.getEnginePower() - 5, 0));
+				}
+			}
+			this.playSound(SoundEventList.PLANE_ENGINE.get(), this.getEnginePower() / 100.0F, this.getEnginePower() / 100.0F * 2.0F);
 			List<ServerPlayer> players = ((ServerLevel) this.level).getPlayers((predicate) -> true);
 			players.forEach((player) -> {
 				if (player != this.getControllingPassenger()) {
 					NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PlaneRotateSyncPacket(this));
+					NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PlaneEnginePowerSyncPacket(this));
 				}
 			});
 		}
 
 		List<Entity> pushedEntities = new ArrayList<>();
 		for (PlanePart part : this.parts) {
-			part.updatePos(this.isAABBCollided());
+			part.updatePos(true);
 			part.pushEntities(pushedEntities);
 		}
 
@@ -372,7 +372,7 @@ public abstract class BasePlaneEntity extends Entity {
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
-	private void resistanceAboveWater() { // TODO 实际数值根据进水体积决定
+	private void resistanceAboveWater() {
 		Vec3d airRes = new Vec3d(0.0D, 0.0D, -this.getAirResFactor() * this.getDeltaMovement().horizontalDistanceSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
 		this.deltaPitch *= 0.9D;
@@ -525,7 +525,7 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	@Override
-	public void move(MoverType type, Vec3 motion) { // TODO
+	public void move(MoverType type, Vec3 motion) {
 		this.level.getProfiler().push("move");
 		Vec3 collideVec = this.collide(motion);
 		double d0 = collideVec.lengthSqr();
@@ -568,7 +568,7 @@ public abstract class BasePlaneEntity extends Entity {
 			}
 		}
 		for (PlanePart yCollidePart : yCollideParts) {
-			if (yCollidePart.isWheel()) { // TODO 等待测试
+			if (yCollidePart.isWheel()) {
 				if (Math.abs(this.getXRot()) < 30.0F) this.deltaPitch -= this.getXRot();
 				if (Math.abs(this.getZRot()) < 30.0F || Math.abs(this.getZRot()) > 150.0F)
 					this.deltaRoll -= this.getZRot();
@@ -645,11 +645,11 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	public int getEnginePower() {
-		return this.entityData.get(ENGINE_POWER);
+		return this.enginePower;
 	}
 
 	public void setEnginePower(int power) {
-		this.entityData.set(ENGINE_POWER, power);
+		this.enginePower = power;
 	}
 
 	public double getLookSpeedSqr() {
@@ -672,10 +672,19 @@ public abstract class BasePlaneEntity extends Entity {
 
 	private boolean isAABBCollided() {
 		AABB aabb = this.getBoundingBox();
-		List<VoxelShape> list = this.level.getEntityCollisions(this, aabb.expandTowards(this.getDeltaMovement()));
-		List<Entity> entities = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
+		Vec3 motion = this.getDeltaMovement();
+		List<VoxelShape> list = this.level.getEntityCollisions(this, aabb.expandTowards(motion));
+		Vec3 collideVec = motion.lengthSqr() == 0.0D ? motion : collideBoundingBox(this, motion, aabb, this.level, list);
+		List<Entity> entities = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), entity -> {
+			Entity vehicle = entity.getVehicle();
+			if (vehicle != null) {
+				return !vehicle.is(this);
+			}
+			return true;
+		});
 //		return !list.isEmpty() || !entities.isEmpty();
-		return true;
+		return !entities.isEmpty() || collideVec.lengthSqr() != motion.lengthSqr();
+//		return true;
 	}
 
 	private Status onGroundStatus() {
@@ -692,37 +701,6 @@ public abstract class BasePlaneEntity extends Entity {
 		return null;
 	}
 
-	private boolean isAABBOnLand() { // TODO
-		AABB aabb = this.getBoundingBox();
-		AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001D, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
-		int i = Mth.floor(aabb1.minX) - 1;
-		int j = Mth.ceil(aabb1.maxX) + 1;
-		int k = Mth.floor(aabb1.minY) - 1;
-		int l = Mth.ceil(aabb1.maxY) + 1;
-		int i1 = Mth.floor(aabb1.minZ) - 1;
-		int j1 = Mth.ceil(aabb1.maxZ) + 1;
-		VoxelShape voxelshape = Shapes.create(aabb1);
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-
-		for (int l1 = i; l1 < j; ++l1) {
-			for (int i2 = i1; i2 < j1; ++i2) {
-				int j2 = (l1 != i && l1 != j - 1 ? 0 : 1) + (i2 != i1 && i2 != j1 - 1 ? 0 : 1);
-				if (j2 != 2) {
-					for (int k2 = k; k2 < l; ++k2) {
-						if (j2 <= 0 || k2 != k && k2 != l - 1) {
-							pos.set(l1, k2, i2);
-							BlockState blockstate = this.level.getBlockState(pos);
-							if (!blockstate.isAir() && Shapes.joinIsNotEmpty(blockstate.getCollisionShape(this.level, pos).move(l1, k2, i2), voxelshape, BooleanOp.AND)) {
-								return true;
-							}
-						}
-					}
-				}
-			}
-		}
-		return false;
-	}
-
 	private boolean isAboveWater() {
 		this.inWaterParts = 0;
 		for (PlanePart part : this.parts) {
@@ -733,32 +711,6 @@ public abstract class BasePlaneEntity extends Entity {
 			}
 		}
 		return this.inWaterParts > 0 && this.inWaterParts < this.parts.size() - 6; // -6是为了减去起落架的部分
-	}
-
-	private boolean isAABBAboveWater() { // TODO
-		AABB aabb = this.getBoundingBox();
-		int i = Mth.floor(aabb.minX);
-		int j = Mth.ceil(aabb.maxX);
-		int k = Mth.floor(aabb.minY);
-		int l = Mth.ceil(aabb.minY + 0.001D);
-		int i1 = Mth.floor(aabb.minZ);
-		int j1 = Mth.ceil(aabb.maxZ);
-		boolean flag = false;
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-
-		for (int k1 = i; k1 < j; ++k1) {
-			for (int l1 = k; l1 < l; ++l1) {
-				for (int i2 = i1; i2 < j1; ++i2) {
-					pos.set(k1, l1, i2);
-					FluidState fluidstate = this.level.getFluidState(pos);
-					if (fluidstate.is(FluidTags.WATER)) {
-						float f = (float) l1 + fluidstate.getHeight(this.level, pos);
-						flag |= aabb.minY < (double) f;
-					}
-				}
-			}
-		}
-		return flag;
 	}
 
 	private boolean checkUnderWater() {
@@ -772,36 +724,6 @@ public abstract class BasePlaneEntity extends Entity {
 		return true;
 	}
 
-	private boolean checkAABBUnderWater() { // TODO
-		AABB aabb = this.getBoundingBox();
-		double d0 = aabb.maxY + 0.001D;
-		int i = Mth.floor(aabb.minX);
-		int j = Mth.ceil(aabb.maxX);
-		int k = Mth.floor(aabb.maxY);
-		int l = Mth.ceil(d0);
-		int i1 = Mth.floor(aabb.minZ);
-		int j1 = Mth.ceil(aabb.maxZ);
-		boolean flag = false;
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-
-		for (int k1 = i; k1 < j; ++k1) {
-			for (int l1 = k; l1 < l; ++l1) {
-				for (int i2 = i1; i2 < j1; ++i2) {
-					pos.set(k1, l1, i2);
-					FluidState fluidstate = this.level.getFluidState(pos);
-					if (fluidstate.is(FluidTags.WATER) && d0 < (double) ((float) pos.getY() + fluidstate.getHeight(this.level, pos))) {
-						if (!fluidstate.isSource()) {
-							return true;
-						}
-						flag = true;
-					}
-				}
-			}
-		}
-		return flag;
-	}
-
-	// TODO 临时代码
 	@Override
 	public void positionRider(Entity passenger) {
 		if (this.hasPassenger(passenger)) {
@@ -838,7 +760,7 @@ public abstract class BasePlaneEntity extends Entity {
 		BlockPos pos = new BlockPos(d0, this.getBoundingBox().maxY, d1);
 		BlockPos below = pos.below();
 		if (!this.level.isWaterAt(below)) {
-			List<Vec3> list = Lists.newArrayList();
+			List<Vec3> list = new ArrayList<>();
 			double d2 = this.level.getBlockFloorHeight(pos);
 			if (DismountHelper.isBlockFloorValid(d2)) {
 				list.add(new Vec3(d0, (double)pos.getY() + d2, d1));

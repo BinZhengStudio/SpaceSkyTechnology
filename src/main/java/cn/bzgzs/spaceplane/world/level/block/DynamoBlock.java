@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class DynamoBlock extends BaseEntityBlock { // TODO
+public class DynamoBlock extends BaseEntityBlock {
 	protected DynamoBlock(Properties p_49224_) {
 		super(p_49224_);
 	}
