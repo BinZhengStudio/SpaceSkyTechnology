@@ -26,6 +26,7 @@ public class NetworkHandler {
 		register(PlaneEnginePowerPacket.class, PlaneEnginePowerPacket::new);
 		register(PlaneRotateChangedPacket.class, PlaneRotateChangedPacket::new);
 		register(PlaneLaunchCannonballPacket.class, PlaneLaunchCannonballPacket::new);
+		register(PlaneExplodePacket.class, PlaneExplodePacket::new);
 
 		// Sent by Server
 		register(PlaneRotateSyncPacket.class, PlaneRotateSyncPacket::new);

@@ -533,7 +533,7 @@ public abstract class BasePlaneEntity extends Entity {
 			this.setPos(this.getX() + collideVec.x, this.getY() + collideVec.y, this.getZ() + collideVec.z);
 		}
 		if (collideVec.add(-motion.x, -motion.y, -motion.z).lengthSqr() > 1.0D) {
-//			this.explode(); // TODO wait for test
+			this.explode(); // TODO wait for test
 		}
 		this.level.getProfiler().pop();
 
@@ -577,11 +577,15 @@ public abstract class BasePlaneEntity extends Entity {
 		return vec3;
 	}
 
-	protected void explode() {
+	public void explode() {
 //		this.level.explode(null, this.getX(), this.getY(), this.getZ(), this.entityData.get(FUEL), flag, flag ? Explosion.BlockInteraction.DESTROY : Explosion.BlockInteraction.NONE);
 //		this.dropItems();
-		this.level.explode(null, this.getX(), this.getY(), this.getZ(), 5.0F, true, Explosion.BlockInteraction.DESTROY);
-		this.discard();
+		if (this.level.isClientSide) {
+			NetworkHandler.INSTANCE.sendToServer(new PlaneExplodePacket());
+		} else {
+			this.level.explode(null, this.getX(), this.getY(), this.getZ(), 5.0F, true, Explosion.BlockInteraction.DESTROY);
+			this.discard();
+		}
 	}
 
 	public void changeEngineState() {
