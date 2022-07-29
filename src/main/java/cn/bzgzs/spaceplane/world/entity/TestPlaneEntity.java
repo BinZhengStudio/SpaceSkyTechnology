@@ -61,7 +61,7 @@ public class TestPlaneEntity extends BasePlaneEntity {
 
 	@Override
 	protected double getMaxAccel() {
-		return 1.0D;
+		return 0.5D;
 	}
 
 	@Override
