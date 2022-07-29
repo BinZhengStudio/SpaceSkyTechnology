@@ -10,39 +10,31 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-public class PlaneRotateSyncPacket extends CustomPacket {
+public class PlaneEnginePowerSyncPacket extends CustomPacket {
 	private final int entity;
-	private final float pitch;
-	private final float yaw;
-	private final float roll;
+	private final int power;
 
-	public PlaneRotateSyncPacket(FriendlyByteBuf buf) {
+	public PlaneEnginePowerSyncPacket(FriendlyByteBuf buf) {
 		this.entity = buf.readInt();
-		this.pitch = buf.readFloat();
-		this.yaw = buf.readFloat();
-		this.roll = buf.readFloat();
+		this.power = buf.readInt();
 	}
 
-	public PlaneRotateSyncPacket(BasePlaneEntity entity) {
+	public PlaneEnginePowerSyncPacket(BasePlaneEntity entity) {
 		this.entity = entity.getId();
-		this.pitch = entity.getXRot();
-		this.yaw = entity.getYRot();
-		this.roll = entity.getZRot();
+		this.power = entity.getEnginePower();
 	}
 
 	@Override
 	public void encode(FriendlyByteBuf buf) {
 		buf.writeInt(entity);
-		buf.writeFloat(pitch);
-		buf.writeFloat(yaw);
-		buf.writeFloat(roll);
+		buf.writeInt(power);
 	}
 
 	@Override
 	public void consumer(Supplier<NetworkEvent.Context> context) {
 		context.get().enqueueWork(() -> Optional.ofNullable(Minecraft.getInstance().level).ifPresentOrElse(clientLevel -> {
 			if (clientLevel.getEntity(this.entity) instanceof BasePlaneEntity plane) {
-				plane.lerpRotate(this.pitch, this.yaw, this.roll);
+				plane.setEnginePower(this.power);
 			}
 		}, () -> {
 			throw new NullPointerException("Fuck! World is NULL!");

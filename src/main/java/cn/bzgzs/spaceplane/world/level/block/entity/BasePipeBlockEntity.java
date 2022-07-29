@@ -14,7 +14,7 @@ import javax.annotation.Nonnull;
 
 public abstract class BasePipeBlockEntity extends BlockEntity {
 	public int flow;
-	public LazyOptional<IFluidHandler> handler = LazyOptional.of(() -> new IFluidHandler() { // TODO
+	public LazyOptional<IFluidHandler> handler = LazyOptional.of(() -> new IFluidHandler() {
 		@Override
 		public int getTanks() {
 			return 1;

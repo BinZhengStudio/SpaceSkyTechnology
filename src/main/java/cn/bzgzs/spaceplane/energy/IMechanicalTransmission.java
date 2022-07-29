@@ -26,7 +26,7 @@ public interface IMechanicalTransmission {
 	 * @return 扭力
 	 */
 	default float getTorque() {
-		return (float) getPower() / getSpeed(); // TODO 可能产生问题
+		return (float) getPower() / getSpeed();
 	};
 
 	/**

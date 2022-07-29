@@ -62,7 +62,7 @@ public class SteamEngineMenu extends AbstractContainerMenu {
 				if (!this.moveItemStackTo(stack1, 2, this.slots.size(), true)) {
 					return ItemStack.EMPTY;
 				}
-			} else if (stack1.getItem() == Items.WATER_BUCKET || stack1.getItem() == Items.BUCKET) { // TODO 不利于模组联动
+			} else if (stack1.getItem() == Items.WATER_BUCKET || stack1.getItem() == Items.BUCKET) {
 				if (!this.moveItemStackTo(stack1, 1, 2, false)) return ItemStack.EMPTY;
 			} else if (!this.moveItemStackTo(stack1, 0, 1, false)) {
 				return ItemStack.EMPTY;

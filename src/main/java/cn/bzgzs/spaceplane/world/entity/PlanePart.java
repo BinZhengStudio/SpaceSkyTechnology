@@ -36,10 +36,6 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 		this.setPosOld(parent.getCenterPos());
 	}
 
-//	public PlanePart(TestPlaneEntity parent, double x, double y, double z, TestPlaneEntity.Part part, float size) {
-//		this(parent, new Vec3d(x, y, z), part, size);
-//	}
-
 	public PlanePart(TestPlaneEntity parent, int pixelX, int pixelY, int pixelZ, TestPlaneEntity.Part part, int pixelSize) {
 		this(parent, new Vec3d(pixelX / 16.0D, pixelY / 16.0D, pixelZ / 16.0D), part, pixelSize / 16.0F);
 	}
@@ -76,7 +72,7 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
 		if (!list.isEmpty()) {
 			for (Entity entity : list) {
-				if (!entity.noPhysics && !pushedEntities.contains(entity)) {
+				if (!entity.noPhysics && !pushedEntities.contains(entity) && !(entity instanceof CannonballEntity)) {
 					this.push(entity);
 					pushedEntities.addAll(list);
 				}
@@ -113,7 +109,7 @@ public class PlanePart extends PartEntity<TestPlaneEntity> {
 		}
 	}
 
-	protected boolean isOnLand() { // TODO
+	protected boolean isOnLand() {
 		AABB aabb = this.getBoundingBox();
 		AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001D, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
 		int i = Mth.floor(aabb1.minX) - 1;

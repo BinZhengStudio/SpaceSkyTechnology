@@ -47,7 +47,7 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 	public CannonballEntity(Level world, BasePlaneEntity plane, int pixelX, int pixelY, int pixelZ, Vec3 initialSpeed, float pitch, float yaw, float roll) {
 		super(EntityTypeList.CANNONBALL.get(), world);
 		Vec3d pointVec = new Vec3d(pixelX / 16.0D, pixelY / 16.0D, pixelZ / 16.0D);
-		Vec3d offset = pointVec.zRot(-Math.toRadians(roll)).xRot(Math.toRadians(pitch)).yRot(-Math.toRadians(yaw));
+		Vec3d offset = pointVec.zRot(-Math.toRadians(roll)).xRot(-Math.toRadians(pitch)).yRot(-Math.toRadians(yaw));
 		Vec3d yOffset = new Vec3d(0.0D, -this.getDimensions(this.getPose()).height / 2, 0.0D).xRot(Math.toRadians(pitch)).yRot(-Math.toRadians(yaw));
 		this.setPos(plane.getCenterPos().add(offset).add(yOffset));
 		this.xo = this.getX();
@@ -216,7 +216,7 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 
 	protected void selfDestruct() {
 		boolean flag = ForgeEventFactory.getMobGriefingEvent(this.level, this.getOwner());
-		this.level.explode(null, this.getX(), this.getY(), this.getZ(), 3.0F /* TODO */, false, flag ? Explosion.BlockInteraction.DESTROY : Explosion.BlockInteraction.NONE);
+		this.level.explode(null, this.getX(), this.getY(), this.getZ(), 3.0F, false, flag ? Explosion.BlockInteraction.DESTROY : Explosion.BlockInteraction.NONE);
 		this.discard();
 	}
 

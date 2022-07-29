@@ -36,7 +36,7 @@ public class SteamEngineSetSpeedPacket extends CustomPacket {
 	public void consumer(Supplier<NetworkEvent.Context> context) {
 		context.get().enqueueWork(() -> Optional.ofNullable(context.get().getSender()).ifPresentOrElse(serverPlayer -> {
 			Level level = serverPlayer.getLevel();
-			if (level.isLoaded(pos)) { // 检查当前BlockPos是否已加载，防止Waiting For Server，TODO 可能要服务端优化
+			if (level.isLoaded(pos)) { // 检查当前BlockPos是否已加载，防止Waiting For Server
 				if (level.getBlockEntity(pos) instanceof SteamEngineBlockEntity blockEntity) blockEntity.setSpeedByScreenButton(this.speed);
 			} else {
 				SpacePlane.LOGGER.error("FUCK YOU! Don't try to WAITING FOR SERVER the TeaCon!");
