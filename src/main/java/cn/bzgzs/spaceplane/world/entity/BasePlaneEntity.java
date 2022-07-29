@@ -8,7 +8,6 @@ import cn.bzgzs.spaceplane.sounds.SoundEventList;
 import cn.bzgzs.spaceplane.util.VecHelper;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.phys.Vec3d;
-import com.google.common.collect.Lists;
 import net.minecraft.BlockUtil;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -20,7 +19,6 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -32,12 +30,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.BooleanOp;
-import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.entity.PartEntity;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
@@ -46,7 +40,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 public abstract class BasePlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
@@ -54,6 +47,7 @@ public abstract class BasePlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> TRACTOR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	public static final int TOTAL_FIRE_TIME = 5;
+	public static final int TOTAL_UPDATE_TIME = 10;
 	private int enginePower;
 	private float zRot;
 	public float zRotO;
@@ -84,9 +78,11 @@ public abstract class BasePlaneEntity extends Entity {
 	private boolean inputLaunchCannonball;
 	private int fireTimeLeft;
 	private int fireTimeRight;
+	private int updateTime;
 	private int inWaterParts;
 	private Status status;
 	private Status oldStatus;
+	private boolean aabbCollided;
 	protected List<PlanePart> parts = new ArrayList<>();
 
 	public BasePlaneEntity(EntityType<?> type, Level world) {
@@ -308,7 +304,7 @@ public abstract class BasePlaneEntity extends Entity {
 
 		List<Entity> pushedEntities = new ArrayList<>();
 		for (PlanePart part : this.parts) {
-			part.updatePos(true);
+			part.updatePos(this.isAABBCollided());
 			part.pushEntities(pushedEntities);
 		}
 
@@ -675,19 +671,38 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	private boolean isAABBCollided() {
-		AABB aabb = this.getBoundingBox();
-		Vec3 motion = this.getDeltaMovement();
-		List<VoxelShape> list = this.level.getEntityCollisions(this, aabb.expandTowards(motion));
-		Vec3 collideVec = motion.lengthSqr() == 0.0D ? motion : collideBoundingBox(this, motion, aabb, this.level, list);
-		List<Entity> entities = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), entity -> {
-			Entity vehicle = entity.getVehicle();
-			if (vehicle != null) {
-				return !vehicle.is(this);
+		if (this.updateTime <= 0) {
+			AABB aabb = this.getBoundingBox();
+			List<Entity> entities = this.level.getEntities(this, aabb, entity -> {
+				Entity vehicle = entity.getVehicle();
+				if (vehicle != null) {
+					return !vehicle.is(this);
+				}
+				return true;
+			});
+
+			boolean blockCollided = false;
+			int minX = (int) Math.floor(aabb.minX) - 3;
+			int minY = (int) Math.floor(aabb.minY) - 3;
+			int minZ = (int) Math.floor(aabb.minZ) - 3;
+			int maxX = (int) Math.floor(aabb.maxX) + 3; // 使用floor()是有原因的
+			int maxY = (int) Math.floor(aabb.maxY) + 3;
+			int maxZ = (int) Math.floor(aabb.maxZ) + 3;
+			for (int i = minX; i < maxX; i++) {
+				for (int j = minY; j < maxY; j++) {
+					for (int k = minZ; k < maxZ; k++) {
+						BlockState block = this.level.getBlockState(new BlockPos(i, j, k));
+						if (!block.isAir()) blockCollided = true;
+					}
+				}
 			}
-			return true;
-		});
+			this.updateTime = TOTAL_UPDATE_TIME;
 //		return !list.isEmpty() || !entities.isEmpty();
-		return !entities.isEmpty() || collideVec.lengthSqr() != motion.lengthSqr();
+			return this.aabbCollided = !entities.isEmpty() || blockCollided;
+		} else {
+			this.updateTime--;
+			return this.aabbCollided;
+		}
 //		return true;
 	}
 
@@ -895,6 +910,7 @@ public abstract class BasePlaneEntity extends Entity {
 		if (tag.contains("Tractor")) this.setTractor(tag.getBoolean("Tractor"));
 		if (tag.contains("EnginePower")) this.setEnginePower(tag.getInt("EnginePower"));
 		if (tag.contains("ZRot")) this.setZRot(tag.getFloat("ZRot"));
+		if (tag.contains("AABBCollided")) this.aabbCollided = tag.getBoolean("AABBCollided");
 	}
 
 	@Override
@@ -904,6 +920,7 @@ public abstract class BasePlaneEntity extends Entity {
 		tag.putBoolean("Tractor", this.getTractor());
 		tag.putInt("EnginePower", this.getEnginePower());
 		tag.putFloat("ZRot", this.getZRot());
+		tag.putBoolean("AABBCollided", this.aabbCollided);
 	}
 
 	@Override
