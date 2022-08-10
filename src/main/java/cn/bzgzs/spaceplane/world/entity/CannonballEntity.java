@@ -206,9 +206,9 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 	protected void onHitEntity(EntityHitResult result) {
 		if (!this.level.isClientSide) {
 			result.getEntity().hurt(DamageSource.explosion((Explosion) null), 8.0F);
-			if (result.getEntity() instanceof PlanePart part) {
-				if (!(this.getOwner() != null && part.is(this.getOwner()))) {
-					part.getParent().explode();
+			if (result.getEntity() instanceof BasePlaneEntity plane) {
+				if (!(this.getOwner() != null && plane.is(this.getOwner()))) {
+					plane.explode();
 				}
 			}
 		}
@@ -237,7 +237,7 @@ public class CannonballEntity extends Entity implements IEntityAdditionalSpawnDa
 		if (!entity.isSpectator() && entity.isAlive() && entity.isPickable()) {
 			Entity owner = this.getOwner();
 			boolean flag = owner == null || this.leftOwner || !owner.isPassengerOfSameVehicle(entity);
-			return flag && (entity.noPhysics || entity instanceof PlanePart) && !(entity instanceof BasePlaneEntity);
+			return flag && (entity.noPhysics || entity instanceof BasePlaneEntity);
 		} else {
 			return false;
 		}

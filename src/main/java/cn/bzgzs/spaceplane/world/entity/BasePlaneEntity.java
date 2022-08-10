@@ -8,7 +8,6 @@ import cn.bzgzs.spaceplane.sounds.SoundEventList;
 import cn.bzgzs.spaceplane.util.VecHelper;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.phys.Vec3d;
-import com.google.common.collect.Lists;
 import net.minecraft.BlockUtil;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -20,7 +19,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -29,11 +28,17 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.WaterlilyBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -46,7 +51,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 public abstract class BasePlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
@@ -54,6 +58,7 @@ public abstract class BasePlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> TRACTOR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
 	public static final int TOTAL_FIRE_TIME = 5;
+	public static final int TOTAL_UPDATE_TIME = 10;
 	private int enginePower;
 	private float zRot;
 	public float zRotO;
@@ -84,15 +89,17 @@ public abstract class BasePlaneEntity extends Entity {
 	private boolean inputLaunchCannonball;
 	private int fireTimeLeft;
 	private int fireTimeRight;
+	private int updateTime;
 	private int inWaterParts;
 	private Status status;
 	private Status oldStatus;
+	private boolean aabbCollided;
 	protected List<PlanePart> parts = new ArrayList<>();
 
 	public BasePlaneEntity(EntityType<?> type, Level world) {
 		super(type, world);
-		this.defineParts();
-		this.noPhysics = true;
+//		this.defineParts();
+//		this.noPhysics = true;
 	}
 
 //	public BasePlaneEntity(Level world, double x, double y, double z) {
@@ -158,20 +165,29 @@ public abstract class BasePlaneEntity extends Entity {
 		this.entityData.define(FUEL, 0); // 燃油量，单位mB
 	}
 
-	@Nullable
-	@Override
-	public PartEntity<?>[] getParts() {
-		PartEntity<?>[] partEntities = new PartEntity[0];
-		return this.parts.toArray(partEntities);
-	}
+//	@Nullable
+//	@Override
+//	public PartEntity<?>[] getParts() {
+//		PartEntity<?>[] partEntities = new PartEntity[0];
+//		return this.parts.toArray(partEntities);
+//	}
 
 	@Override
 	public boolean canCollideWith(Entity entity) {
-		return false;
+		return canVehicleCollide(this, entity);
+	}
+
+	public static boolean canVehicleCollide(Entity entity, Entity vehicle) {
+		return (vehicle.canBeCollidedWith() || vehicle.isPushable()) && !entity.isPassengerOfSameVehicle(vehicle);
 	}
 
 	@Override
 	public boolean canBeCollidedWith() {
+		return true;
+	}
+
+	@Override
+	public boolean isPushable() {
 		return false;
 	}
 
@@ -306,20 +322,30 @@ public abstract class BasePlaneEntity extends Entity {
 			});
 		}
 
-		List<Entity> pushedEntities = new ArrayList<>();
-		for (PlanePart part : this.parts) {
-			part.updatePos(true);
-			part.pushEntities(pushedEntities);
-		}
+//		List<Entity> pushedEntities = new ArrayList<>();
+//		for (PlanePart part : this.parts) {
+//			part.updatePos(this.isAABBCollided());
+//			part.pushEntities(pushedEntities);
+//		}
 
-		for (Entity entity : pushedEntities) {
-			Vec3 motion = entity.getDeltaMovement();
-			double lengthSqr = this.getDeltaMovement().add(-motion.x, -motion.y, -motion.z).lengthSqr();
-			if (lengthSqr > 1.0D) {
-				if (lengthSqr > 2.25D && entity instanceof BasePlaneEntity plane) {
-					plane.explode();
-				} else {
-					entity.hurt(DamageSource.FLY_INTO_WALL, (float) lengthSqr);
+//		for (Entity entity : pushedEntities) {
+//			Vec3 motion = entity.getDeltaMovement();
+//			double lengthSqr = this.getDeltaMovement().add(-motion.x, -motion.y, -motion.z).lengthSqr();
+//			if (lengthSqr > 1.0D) {
+//				if (lengthSqr > 2.25D && entity instanceof BasePlaneEntity plane) {
+//					plane.explode();
+//				} else {
+//					entity.hurt(DamageSource.FLY_INTO_WALL, (float) lengthSqr);
+//				}
+//			}
+//		}
+
+		this.checkInsideBlocks();
+		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
+		if (!list.isEmpty()) {
+			for (Entity entity : list) {
+				if (!entity.hasPassenger(this)) {
+					this.push(entity);
 				}
 			}
 		}
@@ -551,30 +577,31 @@ public abstract class BasePlaneEntity extends Entity {
 				this.setDeltaMovement(xCollide ? 0.0D : vec31.x, this.verticalCollision ? 0.0D : vec31.y, zCollide ? 0.0D : vec31.z);
 			}
 
-//			this.tryCheckInsideBlocks();
-//			float f2 = this.getBlockSpeedFactor();
-//			this.setDeltaMovement(this.getDeltaMovement().multiply(f2, 1.0D, f2));
+			this.tryCheckInsideBlocks();
+			float f2 = this.getBlockSpeedFactor();
+			this.setDeltaMovement(this.getDeltaMovement().multiply(f2, 1.0D, f2));
 		}
 		this.level.getProfiler().pop();
 	}
 
 	private Vec3 collide(Vec3 motion) {
-		Vec3 vec3 = motion;
-		List<PlanePart> yCollideParts = new ArrayList<>();
-		for (PlanePart part : this.parts) {
-			Vec3 collide = part.collide(motion, yCollideParts);
-			if (vec3.lengthSqr() > collide.lengthSqr()) {
-				vec3 = collide;
-			}
-		}
-		for (PlanePart yCollidePart : yCollideParts) {
-			if (yCollidePart.isWheel()) {
-				if (Math.abs(this.getXRot()) < 30.0F) this.deltaPitch -= this.getXRot();
-				if (Math.abs(this.getZRot()) < 30.0F || Math.abs(this.getZRot()) > 150.0F)
-					this.deltaRoll -= this.getZRot();
-			}
-		}
-		return vec3;
+		AABB aabb = this.getBoundingBox();
+		List<VoxelShape> list = this.level.getEntityCollisions(this, aabb.expandTowards(motion));
+		return motion.lengthSqr() == 0.0D ? motion : collideBoundingBox(this, motion, aabb, this.level, list);
+//		List<PlanePart> yCollideParts = new ArrayList<>();
+//		for (PlanePart part : this.parts) {
+//			Vec3 collide = part.collide(motion, yCollideParts);
+//			if (vec3.lengthSqr() > collide.lengthSqr()) {
+//				vec3 = collide;
+//			}
+//		}
+//		for (PlanePart yCollidePart : yCollideParts) {
+//			if (yCollidePart.isWheel()) {
+//				if (Math.abs(this.getXRot()) < 30.0F) this.deltaPitch -= this.getXRot();
+//				if (Math.abs(this.getZRot()) < 30.0F || Math.abs(this.getZRot()) > 150.0F)
+//					this.deltaRoll -= this.getZRot();
+//			}
+//		}
 	}
 
 	public void explode() {
@@ -664,30 +691,95 @@ public abstract class BasePlaneEntity extends Entity {
 		return VecHelper.projectionLength(this.getDeltaMovement(), this.getLookAngle());
 	}
 
+//	private Status getStatus() {
+//		if (this.checkUnderWater()) {
+//			return Status.UNDER_WATER;
+//		} else if (this.isAboveWater()) {
+//			return Status.ABOVE_WATER;
+//		} else {
+//			return Objects.requireNonNullElse(this.onGroundStatus(), Status.IN_AIR);
+//		}
+//	}
+
+
 	private Status getStatus() {
 		if (this.checkUnderWater()) {
 			return Status.UNDER_WATER;
 		} else if (this.isAboveWater()) {
 			return Status.ABOVE_WATER;
 		} else {
-			return Objects.requireNonNullElse(this.onGroundStatus(), Status.IN_AIR);
+			if (this.isOnLand()) {
+				return this.getLandingGear() ? Status.STAND_ON_GROUND : Status.LIE_ON_GROUND;
+			} else {
+				return Status.IN_AIR;
+			}
 		}
 	}
 
-	private boolean isAABBCollided() {
+	protected boolean isOnLand() {
 		AABB aabb = this.getBoundingBox();
-		Vec3 motion = this.getDeltaMovement();
-		List<VoxelShape> list = this.level.getEntityCollisions(this, aabb.expandTowards(motion));
-		Vec3 collideVec = motion.lengthSqr() == 0.0D ? motion : collideBoundingBox(this, motion, aabb, this.level, list);
-		List<Entity> entities = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), entity -> {
-			Entity vehicle = entity.getVehicle();
-			if (vehicle != null) {
-				return !vehicle.is(this);
+		AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001D, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
+		int i = Mth.floor(aabb1.minX) - 1;
+		int j = Mth.ceil(aabb1.maxX) + 1;
+		int k = Mth.floor(aabb1.minY) - 1;
+		int l = Mth.ceil(aabb1.maxY) + 1;
+		int i1 = Mth.floor(aabb1.minZ) - 1;
+		int j1 = Mth.ceil(aabb1.maxZ) + 1;
+		VoxelShape voxelshape = Shapes.create(aabb1);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+		for (int l1 = i; l1 < j; ++l1) {
+			for (int i2 = i1; i2 < j1; ++i2) {
+				int j2 = (l1 != i && l1 != j - 1 ? 0 : 1) + (i2 != i1 && i2 != j1 - 1 ? 0 : 1);
+				if (j2 != 2) {
+					for (int k2 = k; k2 < l; ++k2) {
+						if (j2 <= 0 || k2 != k && k2 != l - 1) {
+							pos.set(l1, k2, i2);
+							BlockState blockstate = this.level.getBlockState(pos);
+							if (!blockstate.isAir() && Shapes.joinIsNotEmpty(blockstate.getCollisionShape(this.level, pos).move(l1, k2, i2), voxelshape, BooleanOp.AND)) {
+								return true;
+							}
+						}
+					}
+				}
 			}
-			return true;
-		});
+		}
+		return false;
+	}
+
+	private boolean isAABBCollided() {
+		if (this.updateTime <= 0) {
+			AABB aabb = this.getBoundingBox();
+			List<Entity> entities = this.level.getEntities(this, aabb, entity -> {
+				Entity vehicle = entity.getVehicle();
+				if (vehicle != null) {
+					return !vehicle.is(this);
+				}
+				return true;
+			});
+
+			boolean blockCollided = false;
+			int minX = (int) Math.floor(aabb.minX) - 3;
+			int minY = (int) Math.floor(aabb.minY) - 3;
+			int minZ = (int) Math.floor(aabb.minZ) - 3;
+			int maxX = (int) Math.floor(aabb.maxX) + 3; // 使用floor()是有原因的
+			int maxY = (int) Math.floor(aabb.maxY) + 3;
+			int maxZ = (int) Math.floor(aabb.maxZ) + 3;
+			for (int i = minX; i < maxX; i++) {
+				for (int j = minY; j < maxY; j++) {
+					for (int k = minZ; k < maxZ; k++) {
+						BlockState block = this.level.getBlockState(new BlockPos(i, j, k));
+						if (!block.isAir()) blockCollided = true;
+					}
+				}
+			}
+			this.updateTime = TOTAL_UPDATE_TIME;
 //		return !list.isEmpty() || !entities.isEmpty();
-		return !entities.isEmpty() || collideVec.lengthSqr() != motion.lengthSqr();
+			return this.aabbCollided = !entities.isEmpty() || blockCollided;
+		} else {
+			this.updateTime--;
+			return this.aabbCollided;
+		}
 //		return true;
 	}
 
@@ -895,6 +987,7 @@ public abstract class BasePlaneEntity extends Entity {
 		if (tag.contains("Tractor")) this.setTractor(tag.getBoolean("Tractor"));
 		if (tag.contains("EnginePower")) this.setEnginePower(tag.getInt("EnginePower"));
 		if (tag.contains("ZRot")) this.setZRot(tag.getFloat("ZRot"));
+		if (tag.contains("AABBCollided")) this.aabbCollided = tag.getBoolean("AABBCollided");
 	}
 
 	@Override
@@ -904,6 +997,7 @@ public abstract class BasePlaneEntity extends Entity {
 		tag.putBoolean("Tractor", this.getTractor());
 		tag.putInt("EnginePower", this.getEnginePower());
 		tag.putFloat("ZRot", this.getZRot());
+		tag.putBoolean("AABBCollided", this.aabbCollided);
 	}
 
 	@Override
@@ -953,10 +1047,10 @@ public abstract class BasePlaneEntity extends Entity {
 		this.inputLaunchCannonball = launchCannonball;
 	}
 
-	@Override
-	public boolean isMultipartEntity() {
-		return true;
-	}
+//	@Override
+//	public boolean isMultipartEntity() {
+//		return true;
+//	}
 
 	@Override
 	public Packet<?> getAddEntityPacket() {
