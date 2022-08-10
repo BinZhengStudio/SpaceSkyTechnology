@@ -45,14 +45,27 @@ public class TestPlaneRenderer extends EntityRenderer<TestPlaneEntity> implement
 
 		VertexConsumer cutoutNoCull = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
 		VertexConsumer translucentCull = buffer.getBuffer(RenderType.entityTranslucentCull(TEXTURE));
-		matrixStack.translate(0.0D, 3.5D, 0.0D);
-		matrixStack.mulPose(Vector3f.YP.rotationDegrees(Mth.lerp(partialTicks, -entity.yRotO, -entity.getYRot())));
-		matrixStack.mulPose(Vector3f.XP.rotationDegrees(Mth.lerp(partialTicks, entity.xRotO, entity.getXRot())));
-		matrixStack.mulPose(Vector3f.ZP.rotationDegrees(Mth.lerp(partialTicks, entity.zRotO, entity.getZRot())));
+		matrixStack.translate(0.0D, entity.getEyeHeight(), 0.0D);
+		if ((entity.yRotO < -90 && entity.getYRot() > 90) || (entity.yRotO > 90 && entity.getYRot() < -90)) {
+			matrixStack.mulPose(Vector3f.YP.rotationDegrees(-entity.getYRot()));
+		} else {
+			matrixStack.mulPose(Vector3f.YP.rotationDegrees(Mth.lerp(partialTicks, -entity.yRotO, -entity.getYRot())));
+		}
+		if ((entity.xRotO < -90 && entity.getXRot() > 90) || (entity.xRotO > 90 && entity.getXRot() < -90)) {
+			matrixStack.mulPose(Vector3f.XP.rotationDegrees(entity.getXRot()));
+		} else {
+			matrixStack.mulPose(Vector3f.XP.rotationDegrees(Mth.lerp(partialTicks, entity.xRotO, entity.getXRot())));
+		}
+		if ((entity.zRotO < -90 && entity.getZRot() > 90) || (entity.zRotO > 90 && entity.getZRot() < -90)) {
+			matrixStack.mulPose(Vector3f.ZP.rotationDegrees(entity.getZRot()));
+		} else {
+			matrixStack.mulPose(Vector3f.ZP.rotationDegrees(Mth.lerp(partialTicks, entity.zRotO, entity.getZRot())));
+		}
 		this.getModel().commonPartRender(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
 		this.getModel().cullPartRender(matrixStack, translucentCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
 		this.getModel().engineDecorateRender(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
-		if (entity.getLandingGear()) this.getModel().landingGearRenderer(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+		if (entity.getLandingGear())
+			this.getModel().landingGearRenderer(matrixStack, cutoutNoCull, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
 		matrixStack.popPose();
 	}
 }

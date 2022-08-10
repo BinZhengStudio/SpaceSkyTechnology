@@ -3,8 +3,10 @@ package cn.bzgzs.spaceplane.client.event;
 import cn.bzgzs.spaceplane.client.gui.PlaneGui;
 import cn.bzgzs.spaceplane.client.player.KeyboardInputList;
 import cn.bzgzs.spaceplane.world.entity.TestPlaneEntity;
+import com.mojang.math.Vector3f;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityViewRenderEvent;
 import net.minecraftforge.client.event.InputEvent;
@@ -55,8 +57,16 @@ public class ClientEventHandler {
 		if (Minecraft.getInstance().player != null) {
 			if (Minecraft.getInstance().player.getVehicle() instanceof TestPlaneEntity plane) {
 				if (Minecraft.getInstance().options.getCameraType() == CameraType.FIRST_PERSON) {
-					event.setRoll(plane.getZRot());
-					event.setPitch(Minecraft.getInstance().player.getXRot() + plane.getXRot());
+					if ((plane.xRotO < -90 && plane.getXRot() > 90) || (plane.xRotO > 90 && plane.getXRot() < -90)) {
+						event.setPitch(Minecraft.getInstance().player.getXRot() + plane.getXRot());
+					} else {
+						event.setPitch(Minecraft.getInstance().player.getXRot() + (float) Mth.lerp(event.getPartialTicks(), plane.xRotO, plane.getXRot()));
+					}
+					if ((plane.zRotO < -90 && plane.getZRot() > 90) || (plane.zRotO > 90 && plane.getZRot() < -90)) {
+						event.setRoll(plane.getZRot());
+					} else {
+						event.setRoll((float) Mth.lerp(event.getPartialTicks(), plane.zRotO, plane.getZRot()));
+					}
 				}
 			}
 		}

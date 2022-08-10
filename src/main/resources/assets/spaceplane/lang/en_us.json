@@ -22,6 +22,14 @@
   "item.spaceplane.rhenium_axe": "Rhenium Axe",
   "item.spaceplane.nickel_axe": "Nickel Axe",
   "item.spaceplane.tractor": "Tractor",
+  "item.spaceplane.bz_logo": "BinZheng Studio",
+
+  "itemTooltip.spaceplane.bz_logo.1":"The BinZhengStudio's 2nd Anniversary Work",
+  "itemTooltip.spaceplane.bz_logo.2":"ThreebodyIndustry-Space&SkyTechnology",
+  "itemTooltip.spaceplane.bz_logo.3": "It is our third year to participate in TeaCon",
+  "itemTooltip.spaceplane.bz_logo.4": "Wish that you can continue to support us",
+  "itemTooltip.spaceplane.bz_logo.5": "Welcome to our website[https://bzgzs.com]",
+  "itemTooltip.spaceplane.bz_logo.6": "Chinese/English/Classic Chineseのサポート",
 
   "container.spaceplane.steam_engine": "Steam Engine",
 
@@ -35,6 +43,19 @@
   "key.category.spaceplane.plane_control" : "Plane Control",
 
   "key.spaceplane.engine_on": "Engine On",
-  "key.spaceplane.climb_up" : "Climb Up",
-  "key.spaceplane.decline" : "Decline"
+  "key.spaceplane.plane_climb_up" : "Climb Up",
+  "key.spaceplane.plane_decline" : "Decline",
+  "key.spaceplane.landing_gear" : "Landing Gear Retract/Down",
+  "key.spaceplane.plane_speed_up" : "Speed Up",
+  "key.spaceplane.plane_look_up" : "Look Up",
+  "key.spaceplane.plane_look_down" : "Look Down",
+  "key.spaceplane.plane_left_roll" : "Left Roll",
+  "key.spaceplane.plane_right_roll" :"Right Roll",
+  "key.spaceplane.plane_left" : "Turn Left",
+  "key.spaceplane.plane_look_right" : "Turn Right",
+  "key.spaceplane.launch_cannonball" : "Launch a Cannonball",
+  "key.spaceplane.launch_missile" : "Launch a Missile",
+  "key.spaceplane.separate_tractor" : "Separate tractor",
+  "key.spaceplane.interceptor_missile" : "Interceptor Missile"
+
 }

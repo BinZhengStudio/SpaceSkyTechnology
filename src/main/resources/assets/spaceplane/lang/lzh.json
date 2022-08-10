@@ -1,5 +1,5 @@
 {
-  "itemGroup.spacePlane": "三體工業：空天科技",
+  "itemGroup.spacePlane": "三體·蒼穹工技",
 
   "block.spaceplane.rhenium_ore": "錸礦",
   "block.spaceplane.deepslate_rhenium_ore": "深錸礦",
@@ -15,6 +15,19 @@
   "item.spaceplane.rhenium_pickaxe": "錸鎬",
   "item.spaceplane.nickel_ingot": "鎳錠",
   "item.spaceplane.nickel_pickaxe": "鎳鎬",
+  "item.spaceplane.bz_logo": "斌政之廳",
+  "item.spaceplane.tractor": "引器",
+  "item.spaceplane.rhenium_shovel": "錸鍬",
+  "item.spaceplane.nickel_shovel": "鎳鍬",
+  "item.spaceplane.rhenium_axe": "錸斧",
+  "item.spaceplane.nickel_axe": "鎳斧",
+
+  "itemTooltip.spaceplane.bz_logo.1":"斌政之廳次大祥",
+  "itemTooltip.spaceplane.bz_logo.2":"三體·蒼穹工技",
+  "itemTooltip.spaceplane.bz_logo.3": "吾等次而再蒞事TeaCon",
+  "itemTooltip.spaceplane.bz_logo.4": "望爾等助吾所作",
+  "itemTooltip.spaceplane.bz_logo.5": "欢迎諸公過吾登之網站[https://bzgzs.cn]",
+  "itemTooltip.spaceplane.bz_logo.6": "白話文/夷文/正統文存之",
 
   "container.spaceplane.steam_engine": "汽機",
 
@@ -25,5 +38,22 @@
   "label.steam_engine.power": "功率(TE/s):",
   "label.steam_engine.water_amount": "水(mB):",
 
-  "key.category.spaceplane.plane_control" : "飛控"
+  "key.category.spaceplane.plane_control" : "飛控",
+
+  "key.spaceplane.engine_on": "發擎",
+  "key.spaceplane.plane_climb_up" : "爬而升",
+  "key.spaceplane.plane_decline" : "降",
+  "key.spaceplane.landing_gear" : "收/放起落之架",
+  "key.spaceplane.plane_speed_up" : "速",
+  "key.spaceplane.plane_look_up" : "機抬",
+  "key.spaceplane.plane_look_down" : "機俯",
+  "key.spaceplane.plane_left_roll" : "左滚",
+  "key.spaceplane.plane_right_roll" :"右滚",
+  "key.spaceplane.plane_left" : "左",
+  "key.spaceplane.plane_look_right" : "右",
+  "key.spaceplane.launch_cannonball" : "發彈",
+  "key.spaceplane.launch_missile" : "發追蹤彈",
+  "key.spaceplane.separate_tractor" : "離牽者",
+  "key.spaceplane.interceptor_missile" : "攔彈"
+
 }

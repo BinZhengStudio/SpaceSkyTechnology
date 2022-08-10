@@ -1,10 +1,10 @@
 package cn.bzgzs.spaceplane.world.entity;
 
 import cn.bzgzs.spaceplane.network.NetworkHandler;
-import cn.bzgzs.spaceplane.network.client.PlaneEnginePacket;
-import cn.bzgzs.spaceplane.network.client.PlaneEnginePowerPacket;
-import cn.bzgzs.spaceplane.network.client.PlaneLandingGearPacket;
-import cn.bzgzs.spaceplane.network.client.PlaneTractorPacket;
+import cn.bzgzs.spaceplane.network.client.*;
+import cn.bzgzs.spaceplane.network.server.PlaneEnginePowerSyncPacket;
+import cn.bzgzs.spaceplane.network.server.PlaneRotateSyncPacket;
+import cn.bzgzs.spaceplane.sounds.SoundEventList;
 import cn.bzgzs.spaceplane.util.VecHelper;
 import cn.bzgzs.spaceplane.world.item.ItemList;
 import cn.bzgzs.spaceplane.world.phys.Vec3d;
@@ -12,53 +12,61 @@ import net.minecraft.BlockUtil;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.tags.FluidTags;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.AirBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.WaterlilyBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.entity.PartEntity;
 import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class BasePlaneEntity extends Entity {
 	private static final EntityDataAccessor<Boolean> ENGINE_ON = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	private static final EntityDataAccessor<Boolean> SPEED_UP = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	private static final EntityDataAccessor<Boolean> LEFT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
-	private static final EntityDataAccessor<Boolean> RIGHT = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> LANDING_GEAR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> TRACTOR = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Integer> FUEL = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
-	private static final EntityDataAccessor<Integer> ENGINE_POWER = SynchedEntityData.defineId(TestPlaneEntity.class, EntityDataSerializers.INT);
-	public static final int LANDING_GEAR_HEIGHT = 2;
-	private float outOfControlTicks;
+	public static final int TOTAL_FIRE_TIME = 5;
+	public static final int TOTAL_UPDATE_TIME = 10;
+	private int enginePower;
 	private float zRot;
+	public float zRotO;
 	private float deltaPitch;
 	private float deltaYaw;
 	private float deltaRoll;
-	private int lerpSteps;
+	private int lerpPosSteps;
+	private int lerpRotateSteps;
 	private double lerpX;
 	private double lerpY;
 	private double lerpZ;
@@ -79,14 +87,22 @@ public abstract class BasePlaneEntity extends Entity {
 	private boolean inputLaunchMissile;
 	private boolean inputInterceptorMissile;
 	private boolean inputLaunchCannonball;
-	private TestPlaneEntity.Status status;
-	private TestPlaneEntity.Status oldStatus;
+	private int fireTimeLeft;
+	private int fireTimeRight;
+	private int updateTime;
+	private int inWaterParts;
+	private Status status;
+	private Status oldStatus;
+	private boolean aabbCollided;
+	protected List<PlanePart> parts = new ArrayList<>();
 
 	public BasePlaneEntity(EntityType<?> type, Level world) {
 		super(type, world);
+//		this.defineParts();
+//		this.noPhysics = true;
 	}
 
-//	public TestPlaneEntity(Level world, double x, double y, double z) {
+//	public BasePlaneEntity(Level world, double x, double y, double z) {
 //		this(EntityTypeList.TEST.get(), world);
 //		this.setPos(x, y, z);
 //		this.xo = x;
@@ -94,12 +110,47 @@ public abstract class BasePlaneEntity extends Entity {
 //		this.zo = z;
 //	}
 
-	@Override
-	protected abstract float getEyeHeight(Pose pose, EntityDimensions size);
-
-	protected abstract double getMaxSpeed();
-
 	protected abstract double getMaxAccel();
+
+	public abstract void defineParts();
+
+	protected abstract double getHorizontalRidingOffset();
+
+	@Override
+	public abstract double getPassengersRidingOffset();
+
+	protected abstract double getMaxDeltaRotate();
+
+	protected abstract double getGroundLiftFactor();
+
+	/**
+	 * 重力加速度，是正数
+	 * @return 重力加速度的绝对值
+	 */
+	protected abstract double getGravity();
+
+	protected abstract double getStandRes();
+
+	protected abstract double getLieRes();
+
+	protected abstract double getLieRotateRes();
+
+	protected abstract double getTakeOffSpeed();
+
+	protected abstract double getAirLiftFactor();
+
+	/**
+	 * 空气阻力因数，是正数
+	 * @return 空气阻力因数的绝对值
+	 */
+	protected abstract double getAirResFactor();
+
+	protected abstract double getAirRotateRes();
+
+	@Override
+	protected float getEyeHeight(Pose pose, EntityDimensions size) {
+		return size.height / 2.0F;
+	}
 
 	@Override
 	protected Entity.MovementEmission getMovementEmission() {
@@ -109,14 +160,17 @@ public abstract class BasePlaneEntity extends Entity {
 	@Override
 	protected void defineSynchedData() {
 		this.entityData.define(ENGINE_ON, false);
-		this.entityData.define(SPEED_UP, false);
-		this.entityData.define(LEFT, false);
-		this.entityData.define(RIGHT, false);
 		this.entityData.define(LANDING_GEAR, true);
 		this.entityData.define(TRACTOR, false);
 		this.entityData.define(FUEL, 0); // 燃油量，单位mB
-		this.entityData.define(ENGINE_POWER, 0);
 	}
+
+//	@Nullable
+//	@Override
+//	public PartEntity<?>[] getParts() {
+//		PartEntity<?>[] partEntities = new PartEntity[0];
+//		return this.parts.toArray(partEntities);
+//	}
 
 	@Override
 	public boolean canCollideWith(Entity entity) {
@@ -142,25 +196,14 @@ public abstract class BasePlaneEntity extends Entity {
 		return LivingEntity.resetForwardDirectionOfRelativePortalPosition(super.getRelativePortalPosition(pAxis, pPortal));
 	}
 
-	protected abstract double getHorizontalRidingOffset();
-
-	@Override
-	public abstract double getPassengersRidingOffset();
 
 	@Override
 	public boolean hurt(DamageSource source, float amount) {
 		return false;
 	}
 
-	@Override
-	public void push(Entity entity) {
-		if (entity instanceof TestPlaneEntity) {
-			if (entity.getBoundingBox().minY < this.getBoundingBox().maxY) {
-				super.push(entity);
-			}
-		} else if (entity.getBoundingBox().minY <= this.getBoundingBox().minY) {
-			super.push(entity);
-		}
+	public boolean hurt(PlanePart part, DamageSource source, float amount) {
+		return false;
 	}
 
 	@Override
@@ -173,9 +216,14 @@ public abstract class BasePlaneEntity extends Entity {
 		this.lerpX = x;
 		this.lerpY = y;
 		this.lerpZ = z;
-		this.lerpYaw = yaw;
+		this.lerpPosSteps = 10;
+	}
+
+	public void lerpRotate(float pitch, float yaw, float roll) {
 		this.lerpPitch = pitch;
-		this.lerpSteps = 10;
+		this.lerpYaw = yaw;
+		this.lerpRoll = roll;
+		this.lerpRotateSteps = 10;
 	}
 
 	@Override
@@ -187,18 +235,10 @@ public abstract class BasePlaneEntity extends Entity {
 	public void tick() {
 		this.oldStatus = this.status;
 		this.status = this.getStatus();
-		if (this.status != TestPlaneEntity.Status.UNDER_WATER) {
-			this.outOfControlTicks = 0.0F;
-		} else {
-			++this.outOfControlTicks;
-		}
-
-		if (!this.level.isClientSide && this.outOfControlTicks >= 60.0F) {
-			this.ejectPassengers();
-		}
 
 		super.tick();
-		this.tickLerp();
+		this.tickLerpPos();
+		this.tickLerpRotate();
 		if (this.isControlledByLocalInstance()) {
 			switch (this.status) {
 				case STAND_ON_GROUND -> {
@@ -222,12 +262,25 @@ public abstract class BasePlaneEntity extends Entity {
 					this.controlInAir();
 					this.inAirResistance();
 				}
-				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
+				case UNDER_WATER -> {
+					this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
+					this.setEngineState(false);
+					if (this.level.isClientSide) {
+						NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePacket(this.getEngineState()));
+					}
+				}
+				default -> this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -this.getGravity(), 0.0D));
 			}
-			if (this.level.isClientSide && this.getEngineState()) {
-				this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getEnginePower() / 100.0D * this.getMaxAccel()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad())));
+			if (this.level.isClientSide) {
+				if (this.inputLaunchCannonball) {
+					NetworkHandler.INSTANCE.sendToServer(new PlaneLaunchCannonballPacket(true, this));
+					NetworkHandler.INSTANCE.sendToServer(new PlaneLaunchCannonballPacket(false, this));
+				}
+				if (this.getEngineState()) {
+					this.setDeltaMovement(this.getDeltaMovement().add(new Vec3d(0.0D, 0.0D, this.getMaxAccel() * this.getEnginePower() / 100.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad())));
+				}
 			}
-			this.move(MoverType.SELF, this.getDeltaMovement()); // TODO 需要覆写
+			this.move(MoverType.SELF, this.getDeltaMovement());
 		} else {
 			this.setDeltaMovement(Vec3.ZERO);
 		}
@@ -236,20 +289,58 @@ public abstract class BasePlaneEntity extends Entity {
 			if (this.getEngineState() && this.inputSpeedUp) {
 				if (this.getEnginePower() < 100) {
 					this.setEnginePower(Math.min(100, this.getEnginePower() + 2));
-					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this.getEnginePower()));
+					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this));
 				}
 			} else {
 				if (this.getEnginePower() > 0) {
 					this.setEnginePower(Math.max(this.getEnginePower() - 5, 0));
-					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this.getEnginePower()));
+					NetworkHandler.INSTANCE.sendToServer(new PlaneEnginePowerPacket(this));
 				}
 			}
-			// TODO
-//			NetworkHandler.INSTANCE.sendToServer(new ClientPlaneControlPacket(this.getSpeedUp(), this.getLeft(), this.getRight()));
+			NetworkHandler.INSTANCE.sendToServer(new PlaneRotateChangedPacket(this));
 		}
 
-		this.checkInsideBlocks(); // TODO 以后要覆写的
-		// 推动实体。TODO 以后要重写
+		if (!this.level.isClientSide) {
+			if (this.fireTimeLeft > 0) {
+				--this.fireTimeLeft;
+			}
+			if (this.fireTimeRight > 0) {
+				--this.fireTimeRight;
+			}
+			if (this.getControllingPassenger() == null) {
+				if (this.getEnginePower() > 0) {
+					this.setEnginePower(Math.max(this.getEnginePower() - 5, 0));
+				}
+			}
+			this.playSound(SoundEventList.PLANE_ENGINE.get(), this.getEnginePower() / 100.0F, this.getEnginePower() / 100.0F * 2.0F);
+			List<ServerPlayer> players = ((ServerLevel) this.level).getPlayers((predicate) -> true);
+			players.forEach((player) -> {
+				if (player != this.getControllingPassenger()) {
+					NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PlaneRotateSyncPacket(this));
+					NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PlaneEnginePowerSyncPacket(this));
+				}
+			});
+		}
+
+//		List<Entity> pushedEntities = new ArrayList<>();
+//		for (PlanePart part : this.parts) {
+//			part.updatePos(this.isAABBCollided());
+//			part.pushEntities(pushedEntities);
+//		}
+
+//		for (Entity entity : pushedEntities) {
+//			Vec3 motion = entity.getDeltaMovement();
+//			double lengthSqr = this.getDeltaMovement().add(-motion.x, -motion.y, -motion.z).lengthSqr();
+//			if (lengthSqr > 1.0D) {
+//				if (lengthSqr > 2.25D && entity instanceof BasePlaneEntity plane) {
+//					plane.explode();
+//				} else {
+//					entity.hurt(DamageSource.FLY_INTO_WALL, (float) lengthSqr);
+//				}
+//			}
+//		}
+
+		this.checkInsideBlocks();
 		List<Entity> list = this.level.getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
 		if (!list.isEmpty()) {
 			for (Entity entity : list) {
@@ -258,6 +349,12 @@ public abstract class BasePlaneEntity extends Entity {
 				}
 			}
 		}
+	}
+
+	@Override
+	public void baseTick() {
+		super.baseTick();
+		this.zRotO = this.getZRot();
 	}
 
 	private void controlTractor() {
@@ -275,57 +372,70 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	private void liftStandOnGround() {
-		float gravity = 0.04F;
-		double lift = 0.017777777777777778D * this.getDeltaMovement().horizontalDistanceSqr();
+		double lift = this.getGroundLiftFactor() * this.getDeltaMovement().horizontalDistanceSqr();
 		if (this.inputClimbUp) {
 			lift *= 2;
 		} else if (this.inputDecline) {
 			lift *= -2;
 		}
-		this.setDeltaMovement(this.getDeltaMovement().add(0.0D, lift - gravity, 0.0D));
+		this.setDeltaMovement(this.getDeltaMovement().add(0.0D, lift - this.getGravity(), 0.0D));
 	}
 
 	private void resistanceStandOnGround() {
-		this.deltaPitch *= 0.9F;
-		this.deltaYaw *= 0.9F;
-		this.deltaRoll *= 0.9F;
-		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 0.23D : 0.2D).yRot(this.getYRotRad());
-		Vec3d airLift = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
+		this.deltaPitch *= this.getLieRotateRes();
+		this.deltaYaw *= this.getLieRotateRes();
+		this.deltaRoll *= this.getLieRotateRes();
+		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 1.1D * this.getStandRes() : this.getStandRes()).yRot(this.getYRotRad());
+		Vec3d airLift = new Vec3d(0.0D, 0.0D, -this.getAirResFactor() * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res.add(airLift))));
 	}
 
 	private void resistanceLieOnGround() {
-		this.deltaPitch *= 0.6F;
-		this.deltaYaw *= 0.6F;
-		this.deltaRoll *= 0.6F;
-		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 1.1D : 1.0D).yRot(this.getYRotRad());
+		this.deltaPitch *= this.getLieRotateRes();
+		this.deltaYaw *= this.getLieRotateRes();
+		this.deltaRoll *= this.getLieRotateRes();
+		Vec3d res = new Vec3d(0.0D, 0.0D, this.inputDecline ? 1.1D * this.getLieRes() : this.getLieRes()).yRot(this.getYRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
-	private void resistanceAboveWater() { // TODO 实际数值根据进水体积决定
-		Vec3d airRes = new Vec3d(0.0D, 0.0D, -0.04D * this.getDeltaMovement().horizontalDistanceSqr()).yRot(this.getYRotRad());
+	private void resistanceAboveWater() {
+		Vec3d airRes = new Vec3d(0.0D, 0.0D, -this.getAirResFactor() * this.getDeltaMovement().horizontalDistanceSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
 		this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
 		this.deltaPitch *= 0.9D;
 		this.deltaYaw *= 0.9D;
 		this.deltaRoll *= 0.9D;
 	}
 
-	private void tickLerp() {
+	private void tickLerpPos() {
 		if (this.isControlledByLocalInstance()) {
-			this.lerpSteps = 0;
+			this.lerpPosSteps = 0;
 			this.setPacketCoordinates(this.getX(), this.getY(), this.getZ());
 		}
 
-		if (this.lerpSteps > 0) {
-			double d0 = this.getX() + (this.lerpX - this.getX()) / (double) this.lerpSteps;
-			double d1 = this.getY() + (this.lerpY - this.getY()) / (double) this.lerpSteps;
-			double d2 = this.getZ() + (this.lerpZ - this.getZ()) / (double) this.lerpSteps;
-			double d3 = Mth.wrapDegrees(this.lerpYaw - (double) this.getYRot());
-			this.setYRot(this.getYRot() + (float) d3 / (float) this.lerpSteps);
-			this.setXRot(this.getXRot() + (float) (this.lerpPitch - (double) this.getXRot()) / (float) this.lerpSteps);
-			--this.lerpSteps;
-			this.setPos(d0, d1, d2);
-			this.setRot(this.getYRot(), this.getXRot());
+		if (this.lerpPosSteps > 0) {
+			double x = this.getX() + (this.lerpX - this.getX()) / (double) this.lerpPosSteps;
+			double y = this.getY() + (this.lerpY - this.getY()) / (double) this.lerpPosSteps;
+			double z = this.getZ() + (this.lerpZ - this.getZ()) / (double) this.lerpPosSteps;
+			--this.lerpPosSteps;
+			this.setPos(x, y, z);
+		}
+	}
+
+	private void tickLerpRotate() {
+		if (this.isControlledByLocalInstance()) {
+			this.lerpRotateSteps = 0;
+			this.setPacketCoordinates(this.getX(), this.getY(), this.getZ());
+		}
+
+		if (this.lerpRotateSteps > 0) {
+			double pitch = Mth.wrapDegrees(this.lerpPitch - (double) this.getXRot());
+			double yaw = Mth.wrapDegrees(this.lerpYaw - (double) this.getYRot());
+			double roll = Mth.wrapDegrees(this.lerpRoll - (double) this.getZRot());
+			this.setXRot(this.getXRot() + (float) pitch / (float) this.lerpRotateSteps);
+			this.setYRot(this.getYRot() + (float) yaw / (float) this.lerpRotateSteps);
+			this.setZRot(this.getZRot() + (float) roll / (float) this.lerpRotateSteps);
+			--this.lerpRotateSteps;
+			this.setRot(this.getXRot(), this.getYRot(), this.getZRot());
 		}
 	}
 
@@ -356,13 +466,13 @@ public abstract class BasePlaneEntity extends Entity {
 			motion = motion.add((lookAngle.x / lookDistance * motionDistance - motion.x) * 0.1D, 0.0D, (lookAngle.z / lookDistance * motionDistance - motion.z) * 0.1D);
 		}
 
-		double lift = this.getLookSpeed() >= 1.5 ? 0.02D : 0.008888888888888888D * this.getDeltaMovement().horizontalDistanceSqr();
+		double lift = this.getLookSpeed() >= this.getTakeOffSpeed() ? 0.02D : this.getAirLiftFactor() * this.getLookSpeedSqr();
 		if (this.inputClimbUp) {
 			lift *= 2;
 		} else if (this.inputDecline) {
 			lift *= -2;
 		}
-		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad());
+		Vec3d liftVec = new Vec3d(0.0D, lift, 0.0D).zRot(-this.getZRotRad()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
 		motion = motion.add(liftVec);
 
 		this.setRot(this.getXRot() + this.deltaPitch, this.getYRot() + this.deltaYaw, this.getZRot() + this.deltaRoll);
@@ -372,7 +482,7 @@ public abstract class BasePlaneEntity extends Entity {
 	private void controlInAir() {
 		if (this.level.isClientSide) {
 			double speedRatio = this.getLookSpeed() / 20.0D; // 当前速度与最快速度的比值
-			double deltaRotate = speedRatio * 5.0D;
+			double deltaRotate = speedRatio * this.getMaxDeltaRotate();
 			if (this.inputLookUp) {
 				this.deltaPitch -= deltaRotate * Math.cos(this.getZRotRad()); // MC中，仰视则pitch为负，故用减法
 				this.deltaYaw += deltaRotate * Math.sin(this.getZRotRad());
@@ -382,12 +492,12 @@ public abstract class BasePlaneEntity extends Entity {
 				this.deltaYaw -= deltaRotate * Math.sin(this.getZRotRad());
 			}
 			if (this.inputLeftRoll) {
-				this.deltaYaw += deltaRotate * Math.abs(Math.sin(this.getXRotRad()));
-				this.deltaRoll -= deltaRotate * Math.abs(Math.cos(this.getXRotRad()));
+				this.deltaYaw += deltaRotate * Math.sin(this.getXRotRad());
+				this.deltaRoll -= deltaRotate * Math.cos(this.getXRotRad());
 			}
 			if (this.inputRightRoll) {
-				this.deltaYaw -= deltaRotate * Math.abs(Math.sin(this.getXRotRad()));
-				this.deltaRoll += deltaRotate * Math.abs(Math.cos(this.getXRotRad()));
+				this.deltaYaw -= deltaRotate * Math.sin(this.getXRotRad());
+				this.deltaRoll += deltaRotate * Math.cos(this.getXRotRad());
 			}
 			if (this.inputLeft) {
 				this.deltaPitch -= deltaRotate * Math.cos(this.getXRotRad()) * Math.sin(this.getZRotRad());
@@ -403,23 +513,106 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	private void inAirResistance() {
-		this.deltaPitch *= 0.9F;
-		this.deltaYaw *= 0.9F;
-		this.deltaRoll *= 0.9F;
+		this.deltaPitch *= this.getAirRotateRes();
+		this.deltaYaw *= this.getAirRotateRes();
+		this.deltaRoll *= this.getAirRotateRes();
 
-		Vec3d res = new Vec3d(0.0D, 0.0D, 0.04D * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad());
+		Vec3d res;
+		if (this.getDeltaMovement().dot(this.getLookAngle()) >= 0) {
+			res = new Vec3d(0.0D, 0.0D, this.getAirResFactor() * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
+		} else {
+			res = new Vec3d(0.0D, 0.0D, -this.getAirResFactor() * this.getLookSpeedSqr()).xRot(this.getXRotRad()).yRot(this.getYRotRad());
+		}
 		this.setDeltaMovement(this.getDeltaMovement().add(VecHelper.calcResistance(this.getDeltaMovement(), res)));
 	}
 
-	public void setControlState(boolean speedUp, boolean left, boolean right) {
-		this.setSpeedUp(speedUp);
-		this.setLeft(left);
-		this.setRight(right);
+	public void launchCannonBall(boolean left, Vec3 initialSpeed, float pitch, float yaw, float roll) {
+//		if (this.cannonball > 0)
+		if (left && this.fireTimeLeft <= 0) {
+			CannonballEntity cannonball = new CannonballEntity(this.level, this, -28, -13, 0, initialSpeed, pitch, yaw, roll);
+			this.level.addFreshEntity(cannonball);
+			this.fireTimeLeft = TOTAL_FIRE_TIME;
+		}
+		if (!left && this.fireTimeRight <= 0) {
+			CannonballEntity cannonball = new CannonballEntity(this.level, this, 28, -13, 0, initialSpeed, pitch, yaw, roll);
+			this.level.addFreshEntity(cannonball);
+			this.fireTimeRight = TOTAL_FIRE_TIME;
+		}
+//		this.cannonball--;
+	}
+
+	protected Vec3d getCenterPos() {
+		return new Vec3d(this.getX(), this.getY() + this.getEyeHeight(), this.getZ());
 	}
 
 	public void setInputEngineOnActivation(boolean activation) {
 		if (!activation) this.changeEngineState();
 		this.inputEngineOnActivation = activation;
+	}
+
+	@Override
+	public void move(MoverType type, Vec3 motion) {
+		this.level.getProfiler().push("move");
+		Vec3 collideVec = this.collide(motion);
+		double d0 = collideVec.lengthSqr();
+		if (d0 > 1.0E-7D) {
+			this.setPos(this.getX() + collideVec.x, this.getY() + collideVec.y, this.getZ() + collideVec.z);
+		}
+		if (collideVec.add(-motion.x, -motion.y, -motion.z).lengthSqr() > 1.0D) {
+			this.explode(); // TODO wait for test
+		}
+		this.level.getProfiler().pop();
+
+		this.level.getProfiler().push("resetMotion");
+		boolean xCollide = !Mth.equal(motion.x, collideVec.x);
+		boolean zCollide = !Mth.equal(motion.z, collideVec.z);
+		this.horizontalCollision = xCollide || zCollide;
+		this.verticalCollision = motion.y != collideVec.y;
+		this.verticalCollisionBelow = this.verticalCollision && motion.y < 0.0D;
+		if (this.isRemoved()) {
+			this.level.getProfiler().pop();
+		} else {
+			Vec3 vec31 = this.getDeltaMovement();
+			if (this.horizontalCollision || this.verticalCollision) {
+				this.setDeltaMovement(xCollide ? 0.0D : vec31.x, this.verticalCollision ? 0.0D : vec31.y, zCollide ? 0.0D : vec31.z);
+			}
+
+			this.tryCheckInsideBlocks();
+			float f2 = this.getBlockSpeedFactor();
+			this.setDeltaMovement(this.getDeltaMovement().multiply(f2, 1.0D, f2));
+		}
+		this.level.getProfiler().pop();
+	}
+
+	private Vec3 collide(Vec3 motion) {
+		AABB aabb = this.getBoundingBox();
+		List<VoxelShape> list = this.level.getEntityCollisions(this, aabb.expandTowards(motion));
+		return motion.lengthSqr() == 0.0D ? motion : collideBoundingBox(this, motion, aabb, this.level, list);
+//		List<PlanePart> yCollideParts = new ArrayList<>();
+//		for (PlanePart part : this.parts) {
+//			Vec3 collide = part.collide(motion, yCollideParts);
+//			if (vec3.lengthSqr() > collide.lengthSqr()) {
+//				vec3 = collide;
+//			}
+//		}
+//		for (PlanePart yCollidePart : yCollideParts) {
+//			if (yCollidePart.isWheel()) {
+//				if (Math.abs(this.getXRot()) < 30.0F) this.deltaPitch -= this.getXRot();
+//				if (Math.abs(this.getZRot()) < 30.0F || Math.abs(this.getZRot()) > 150.0F)
+//					this.deltaRoll -= this.getZRot();
+//			}
+//		}
+	}
+
+	public void explode() {
+//		this.level.explode(null, this.getX(), this.getY(), this.getZ(), this.entityData.get(FUEL), flag, flag ? Explosion.BlockInteraction.DESTROY : Explosion.BlockInteraction.NONE);
+//		this.dropItems();
+		if (this.level.isClientSide) {
+			NetworkHandler.INSTANCE.sendToServer(new PlaneExplodePacket());
+		} else {
+			this.level.explode(null, this.getX(), this.getY(), this.getZ(), 5.0F, true, Explosion.BlockInteraction.DESTROY);
+			this.discard();
+		}
 	}
 
 	public void changeEngineState() {
@@ -483,11 +676,11 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	public int getEnginePower() {
-		return this.entityData.get(ENGINE_POWER);
+		return this.enginePower;
 	}
 
 	public void setEnginePower(int power) {
-		this.entityData.set(ENGINE_POWER, power);
+		this.enginePower = power;
 	}
 
 	public double getLookSpeedSqr() {
@@ -498,81 +691,32 @@ public abstract class BasePlaneEntity extends Entity {
 		return VecHelper.projectionLength(this.getDeltaMovement(), this.getLookAngle());
 	}
 
-	public boolean getSpeedUp() {
-		return this.entityData.get(SPEED_UP);
-	}
+//	private Status getStatus() {
+//		if (this.checkUnderWater()) {
+//			return Status.UNDER_WATER;
+//		} else if (this.isAboveWater()) {
+//			return Status.ABOVE_WATER;
+//		} else {
+//			return Objects.requireNonNullElse(this.onGroundStatus(), Status.IN_AIR);
+//		}
+//	}
 
-	private void setSpeedUp(boolean speedUp) {
-		this.entityData.set(SPEED_UP, speedUp);
-	}
 
-	public boolean getLeft() {
-		return this.entityData.get(LEFT);
-	}
-
-	private void setLeft(boolean left) {
-		this.entityData.set(LEFT, left);
-	}
-
-	public boolean getRight() {
-		return this.entityData.get(RIGHT);
-	}
-
-	private void setRight(boolean right) {
-		this.entityData.set(RIGHT, right);
-	}
-
-	private TestPlaneEntity.Status getStatus() {
+	private Status getStatus() {
 		if (this.checkUnderWater()) {
-			return TestPlaneEntity.Status.UNDER_WATER;
+			return Status.UNDER_WATER;
 		} else if (this.isAboveWater()) {
-			return TestPlaneEntity.Status.ABOVE_WATER;
+			return Status.ABOVE_WATER;
 		} else {
-			float f = this.getGroundFriction();
-			if (f > 0.0F) {
-				return this.getLandingGear() ? TestPlaneEntity.Status.STAND_ON_GROUND : TestPlaneEntity.Status.LIE_ON_GROUND;
+			if (this.isOnLand()) {
+				return this.getLandingGear() ? Status.STAND_ON_GROUND : Status.LIE_ON_GROUND;
 			} else {
-				return TestPlaneEntity.Status.IN_AIR;
+				return Status.IN_AIR;
 			}
 		}
 	}
 
-	public float getGroundFriction() {
-		AABB aabb = this.getBoundingBox();
-		AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001D, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
-		int i = Mth.floor(aabb1.minX) - 1;
-		int j = Mth.ceil(aabb1.maxX) + 1;
-		int k = Mth.floor(aabb1.minY) - 1;
-		int l = Mth.ceil(aabb1.maxY) + 1;
-		int i1 = Mth.floor(aabb1.minZ) - 1;
-		int j1 = Mth.ceil(aabb1.maxZ) + 1;
-		VoxelShape voxelshape = Shapes.create(aabb1);
-		float f = 0.0F;
-		int k1 = 0;
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-
-		for (int l1 = i; l1 < j; ++l1) {
-			for (int i2 = i1; i2 < j1; ++i2) {
-				int j2 = (l1 != i && l1 != j - 1 ? 0 : 1) + (i2 != i1 && i2 != j1 - 1 ? 0 : 1);
-				if (j2 != 2) {
-					for (int k2 = k; k2 < l; ++k2) {
-						if (j2 <= 0 || k2 != k && k2 != l - 1) {
-							pos.set(l1, k2, i2);
-							BlockState blockstate = this.level.getBlockState(pos);
-							if (!(blockstate.getBlock() instanceof WaterlilyBlock) && Shapes.joinIsNotEmpty(blockstate.getCollisionShape(this.level, pos).move(l1, k2, i2), voxelshape, BooleanOp.AND)) {
-								f += blockstate.getFriction(this.level, pos, this);
-								++k1;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		return f / (float) k1;
-	}
-
-	public boolean isOnLand() { // TODO 以后要自行编写碰撞检测
+	protected boolean isOnLand() {
 		AABB aabb = this.getBoundingBox();
 		AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001D, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
 		int i = Mth.floor(aabb1.minX) - 1;
@@ -600,69 +744,82 @@ public abstract class BasePlaneEntity extends Entity {
 				}
 			}
 		}
-
 		return false;
 	}
 
-	private boolean isAboveWater() {
-		AABB aabb = this.getBoundingBox();
-		int i = Mth.floor(aabb.minX);
-		int j = Mth.ceil(aabb.maxX);
-		int k = Mth.floor(aabb.minY);
-		int l = Mth.ceil(aabb.minY + 0.001D);
-		int i1 = Mth.floor(aabb.minZ);
-		int j1 = Mth.ceil(aabb.maxZ);
-		boolean flag = false;
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+	private boolean isAABBCollided() {
+		if (this.updateTime <= 0) {
+			AABB aabb = this.getBoundingBox();
+			List<Entity> entities = this.level.getEntities(this, aabb, entity -> {
+				Entity vehicle = entity.getVehicle();
+				if (vehicle != null) {
+					return !vehicle.is(this);
+				}
+				return true;
+			});
 
-		for (int k1 = i; k1 < j; ++k1) {
-			for (int l1 = k; l1 < l; ++l1) {
-				for (int i2 = i1; i2 < j1; ++i2) {
-					pos.set(k1, l1, i2);
-					FluidState fluidstate = this.level.getFluidState(pos);
-					if (fluidstate.is(FluidTags.WATER)) {
-						float f = (float) l1 + fluidstate.getHeight(this.level, pos);
-						flag |= aabb.minY < (double) f;
+			boolean blockCollided = false;
+			int minX = (int) Math.floor(aabb.minX) - 3;
+			int minY = (int) Math.floor(aabb.minY) - 3;
+			int minZ = (int) Math.floor(aabb.minZ) - 3;
+			int maxX = (int) Math.floor(aabb.maxX) + 3; // 使用floor()是有原因的
+			int maxY = (int) Math.floor(aabb.maxY) + 3;
+			int maxZ = (int) Math.floor(aabb.maxZ) + 3;
+			for (int i = minX; i < maxX; i++) {
+				for (int j = minY; j < maxY; j++) {
+					for (int k = minZ; k < maxZ; k++) {
+						BlockState block = this.level.getBlockState(new BlockPos(i, j, k));
+						if (!block.isAir()) blockCollided = true;
 					}
 				}
 			}
+			this.updateTime = TOTAL_UPDATE_TIME;
+//		return !list.isEmpty() || !entities.isEmpty();
+			return this.aabbCollided = !entities.isEmpty() || blockCollided;
+		} else {
+			this.updateTime--;
+			return this.aabbCollided;
 		}
+//		return true;
+	}
 
-		return flag;
+	private Status onGroundStatus() {
+		int onLandWheel = 0;
+		int onLandPart = 0;
+		for (PlanePart part : this.parts) {
+			if (part.isOnLand()) {
+				onLandPart++;
+				if (part.isWheel()) onLandWheel++;
+			}
+		}
+		if (onLandWheel >= 3) return Status.STAND_ON_GROUND;
+		if (onLandPart >= 3) return Status.LIE_ON_GROUND;
+		return null;
+	}
+
+	private boolean isAboveWater() {
+		this.inWaterParts = 0;
+		for (PlanePart part : this.parts) {
+			if (!part.isLandingGear()) {
+				if (part.checkUnderWater()) {
+					this.inWaterParts++;
+				}
+			}
+		}
+		return this.inWaterParts > 0 && this.inWaterParts < this.parts.size() - 6; // -6是为了减去起落架的部分
 	}
 
 	private boolean checkUnderWater() {
-		AABB aabb = this.getBoundingBox();
-		double d0 = aabb.maxY + 0.001D;
-		int i = Mth.floor(aabb.minX);
-		int j = Mth.ceil(aabb.maxX);
-		int k = Mth.floor(aabb.maxY);
-		int l = Mth.ceil(d0);
-		int i1 = Mth.floor(aabb.minZ);
-		int j1 = Mth.ceil(aabb.maxZ);
-		boolean flag = false;
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-
-		for (int k1 = i; k1 < j; ++k1) {
-			for (int l1 = k; l1 < l; ++l1) {
-				for (int i2 = i1; i2 < j1; ++i2) {
-					pos.set(k1, l1, i2);
-					FluidState fluidstate = this.level.getFluidState(pos);
-					if (fluidstate.is(FluidTags.WATER) && d0 < (double) ((float) pos.getY() + fluidstate.getHeight(this.level, pos))) {
-						if (!fluidstate.isSource()) {
-							return true;
-						}
-
-						flag = true;
-					}
-				}
+		boolean flag;
+		for (PlanePart part : this.parts) {
+			if (!part.isLandingGear()) {
+				flag = part.checkUnderWater();
+				if (!flag) return false;
 			}
 		}
-
-		return flag;
+		return true;
 	}
 
-	// TODO 临时代码
 	@Override
 	public void positionRider(Entity passenger) {
 		if (this.hasPassenger(passenger)) {
@@ -678,8 +835,9 @@ public abstract class BasePlaneEntity extends Entity {
 	}
 
 	private Vec3 calculateRiderOffset() {
-		return new Vec3(0.0D, this.getEyeHeight() + this.getPassengersRidingOffset(), 0.0D)
-				.add(new Vec3d(0.0D, 0.0D, this.getHorizontalRidingOffset()).xRot(this.getXRotRad()).yRot(this.getYRotRad()).zRot(this.getZRotRad()));
+		return new Vec3(0.0D, this.getEyeHeight(), 0.0D)
+				.add(new Vec3d(0.0D, 0.0D, this.getHorizontalRidingOffset()).xRot(this.getXRotRad()).yRot(this.getYRotRad()))
+				.add(new Vec3d(0.0D, -1.62D, 0.0D));
 	}
 
 	protected void clampRotation(Entity entityToUpdate) {
@@ -689,6 +847,47 @@ public abstract class BasePlaneEntity extends Entity {
 		entityToUpdate.yRotO += yaw1 - yaw;
 		entityToUpdate.setYRot(entityToUpdate.getYRot() + yaw1 - yaw);
 		entityToUpdate.setYHeadRot(entityToUpdate.getYRot());
+	}
+
+	public Vec3 getDismountLocationForPassenger(LivingEntity entity) { // TODO
+		Vec3 vec3 = getCollisionHorizontalEscapeVector(this.getBbWidth() * Mth.SQRT_OF_TWO, entity.getBbWidth(), entity.getYRot());
+		double d0 = this.getX() + vec3.x;
+		double d1 = this.getZ() + vec3.z;
+		BlockPos pos = new BlockPos(d0, this.getBoundingBox().maxY, d1);
+		BlockPos below = pos.below();
+		if (!this.level.isWaterAt(below)) {
+			List<Vec3> list = new ArrayList<>();
+			double d2 = this.level.getBlockFloorHeight(pos);
+			if (DismountHelper.isBlockFloorValid(d2)) {
+				list.add(new Vec3(d0, (double)pos.getY() + d2, d1));
+			}
+
+			double d3 = this.level.getBlockFloorHeight(below);
+			if (DismountHelper.isBlockFloorValid(d3)) {
+				list.add(new Vec3(d0, (double)below.getY() + d3, d1));
+			}
+
+			for(Pose pose : entity.getDismountPoses()) {
+				for(Vec3 vec31 : list) {
+					if (DismountHelper.canDismountTo(this.level, vec31, entity, pose)) {
+						entity.setPose(pose);
+						return vec31;
+					}
+				}
+			}
+		}
+		return super.getDismountLocationForPassenger(entity);
+	}
+
+	@Override
+	public boolean shouldRenderAtSqrDistance(double distance) {
+		double d0 = this.getBoundingBox().getSize() * 4.0D;
+		if (Double.isNaN(d0)) {
+			d0 = 4.0D;
+		}
+
+		d0 *= 64.0D;
+		return distance < d0 * d0;
 	}
 
 	@Override
@@ -702,6 +901,25 @@ public abstract class BasePlaneEntity extends Entity {
 		LIE_ON_GROUND,
 		IN_AIR,
 		UNDER_WATER
+	}
+
+	public enum Part {
+		HEAD,
+		BODY,
+		ENGINE,
+		WINDSHIELD,
+		LEFT_WING,
+		LEFT_FRONT_WING,
+		RIGHT_WING,
+		RIGHT_FRONT_WING,
+		LEFT_RUDDER,
+		RIGHT_RUDDER,
+		LEFT_LANDING_GEAR,
+		RIGHT_LANDING_GEAR,
+		FRONT_LANDING_GEAR,
+		LEFT_LANDING_GEAR_WHEEL,
+		RIGHT_LANDING_GEAR_WHEEL,
+		FRONT_LANDING_GEAR_WHEEL,
 	}
 
 	public double getXRotRad() {
@@ -728,24 +946,48 @@ public abstract class BasePlaneEntity extends Entity {
 		}
 	}
 
-	protected void setRot(float pitch, float yaw, float roll) {
-		this.setRot(yaw, pitch);
+	public void setRot(float pitch, float yaw, float roll) {
+		boolean flag = false;
+		if (pitch < -90) {
+			flag = true;
+			pitch = -pitch - 180.0F;
+		}
+		if (pitch > 90) {
+			flag = true;
+			pitch = -pitch + 180.0F;
+		}
+		if (flag) {
+			yaw += 180.0F;
+			roll += 180.0F;
+			this.deltaPitch = -this.deltaPitch;
+			if (this.getControllingPassenger() instanceof Player player) {
+				player.setYBodyRot(Mth.wrapDegrees(this.getYRot() + 180.0F));
+				player.setYRot(Mth.wrapDegrees(player.getYRot() + 180.0F));
+				player.setYHeadRot(player.getYRot());
+			}
+			this.xRotO = Mth.wrapDegrees(pitch);
+			this.yRotO = Mth.wrapDegrees(yaw);
+			this.zRotO = Mth.wrapDegrees(roll);
+		}
+
+		this.setXRot(Mth.wrapDegrees(pitch));
+		this.setYRot(Mth.wrapDegrees(yaw));
 		this.setZRot(Mth.wrapDegrees(roll));
 	}
 
 	@Override
-	protected void setRot(float yaw, float pitch) {
-		this.setXRot(Mth.wrapDegrees(pitch));
-		this.setYRot(Mth.wrapDegrees(yaw));
+	public void setRot(float yaw, float pitch) {
+		this.setRot(pitch, yaw, this.getZRot());
 	}
 
 	@Override
 	protected void readAdditionalSaveData(CompoundTag tag) {
-		this.setEngineState(tag.getBoolean("EngineState"));
-		this.setLandingGear(tag.getBoolean("LandingGear"));
-		this.setTractor(tag.getBoolean("Tractor"));
-		this.setEnginePower(tag.getInt("EnginePower"));
-		this.setZRot(tag.getFloat("ZRot"));
+		if (tag.contains("EngineState")) this.setEngineState(tag.getBoolean("EngineState"));
+		if (tag.contains("LandingGear")) this.setLandingGear(tag.getBoolean("LandingGear"));
+		if (tag.contains("Tractor")) this.setTractor(tag.getBoolean("Tractor"));
+		if (tag.contains("EnginePower")) this.setEnginePower(tag.getInt("EnginePower"));
+		if (tag.contains("ZRot")) this.setZRot(tag.getFloat("ZRot"));
+		if (tag.contains("AABBCollided")) this.aabbCollided = tag.getBoolean("AABBCollided");
 	}
 
 	@Override
@@ -755,27 +997,26 @@ public abstract class BasePlaneEntity extends Entity {
 		tag.putBoolean("Tractor", this.getTractor());
 		tag.putInt("EnginePower", this.getEnginePower());
 		tag.putFloat("ZRot", this.getZRot());
+		tag.putBoolean("AABBCollided", this.aabbCollided);
 	}
 
 	@Override
 	public InteractionResult interact(Player player, InteractionHand hand) {
 		if (player.isSecondaryUseActive()) {
 			return InteractionResult.PASS;
-		} else if (player.getItemInHand(hand).is(ItemList.TRACTOR.get()) && this.status == TestPlaneEntity.Status.STAND_ON_GROUND && !this.getTractor() && !this.getEngineState()) {
+		} else if (player.getItemInHand(hand).is(ItemList.TRACTOR.get()) && this.status == Status.STAND_ON_GROUND && !this.getTractor() && !this.getEngineState()) {
 			if (this.getControllingPassenger() == null && !this.level.isClientSide) {
 				this.setTractor(true);
 				if (!player.getAbilities().instabuild) player.getItemInHand(hand).shrink(1);
 				return InteractionResult.CONSUME;
 			}
 			return InteractionResult.PASS;
-		} else if (this.outOfControlTicks < 60.0F) {
+		} else {
 			if (!this.level.isClientSide) {
 				return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
 			} else {
 				return InteractionResult.SUCCESS;
 			}
-		} else {
-			return InteractionResult.PASS;
 		}
 	}
 
@@ -805,6 +1046,11 @@ public abstract class BasePlaneEntity extends Entity {
 		this.inputInterceptorMissile = interceptorMissile;
 		this.inputLaunchCannonball = launchCannonball;
 	}
+
+//	@Override
+//	public boolean isMultipartEntity() {
+//		return true;
+//	}
 
 	@Override
 	public Packet<?> getAddEntityPacket() {

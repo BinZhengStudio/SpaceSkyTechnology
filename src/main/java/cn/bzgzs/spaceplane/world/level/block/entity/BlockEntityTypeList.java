@@ -12,6 +12,5 @@ public class BlockEntityTypeList {
 
 	public static final RegistryObject<BlockEntityType<AlloyFurnaceBlockEntity>> ALLOY_FURNACE = BLOCK_ENTITY_TYPE.register("alloy_furnace", () -> BlockEntityType.Builder.of(AlloyFurnaceBlockEntity::new, BlockList.ALLOY_FURNACE.get()).build(null));
 	public static final RegistryObject<BlockEntityType<TransmissionRodBlockEntity>> TRANSMISSION_ROD = BLOCK_ENTITY_TYPE.register("transmission_rod", () -> BlockEntityType.Builder.of(TransmissionRodBlockEntity::new, BlockList.TRANSMISSION_ROD.get()).build(null));
-	public static final RegistryObject<BlockEntityType<IronFluidPipeBlockEntity>> IRON_FLUID_PIPE = BLOCK_ENTITY_TYPE.register("iron_fluid_pipe", () -> BlockEntityType.Builder.of(IronFluidPipeBlockEntity::new, BlockList.FLUID_PIPE.get()).build(null));
 	public static final RegistryObject<BlockEntityType<SteamEngineBlockEntity>> STEAM_ENGINE = BLOCK_ENTITY_TYPE.register("steam_engine", () -> BlockEntityType.Builder.of(SteamEngineBlockEntity::new, BlockList.STEAM_ENGINE.get()).build(null));
 }

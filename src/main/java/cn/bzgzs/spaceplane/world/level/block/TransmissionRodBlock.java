@@ -19,7 +19,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class TransmissionRodBlock extends BaseEntityBlock {
-	public static final EnumProperty<Direction.Axis> AXIS = BlockStateProperties.AXIS; // TODO 待添加至stateDefinition
+	public static final EnumProperty<Direction.Axis> AXIS = BlockStateProperties.AXIS;
 
 	protected TransmissionRodBlock() {
 		super(Block.Properties.of(Material.METAL).requiresCorrectToolForDrops().strength(3.0F).sound(SoundType.METAL));

@@ -22,6 +22,14 @@
   "item.spaceplane.rhenium_axe": "铼斧",
   "item.spaceplane.nickel_axe": "镍斧",
   "item.spaceplane.tractor": "牵引器",
+  "item.spaceplane.bz_logo": "斌政工作室",
+
+  "itemTooltip.spaceplane.bz_logo.1":"斌政工作室两周年§m巨献",
+  "itemTooltip.spaceplane.bz_logo.2":"三体工业：空天科技",
+  "itemTooltip.spaceplane.bz_logo.3": "第三年参加TeaCon",
+  "itemTooltip.spaceplane.bz_logo.4": "还希望大家能够继续支持我们",
+  "itemTooltip.spaceplane.bz_logo.5": "欢迎大家造访我们的网站[https://bzgzs.cn]",
+  "itemTooltip.spaceplane.bz_logo.6": "提供中文/英文/文言文版本",
 
   "container.spaceplane.steam_engine": "蒸汽引擎",
 
@@ -34,7 +42,23 @@
 
   "key.category.spaceplane.plane_control" : "飞机控制",
 
-  "key.spaceplane.engine_on": "引擎开启",
-  "key.spaceplane.climb_up" : "爬升",
-  "key.spaceplane.decline" : "下降"
+  "key.spaceplane.engine_on": "启动引擎",
+  "key.spaceplane.plane_climb_up" : "爬升",
+  "key.spaceplane.plane_decline" : "下降",
+  "key.spaceplane.landing_gear" : "收起/放下起落架",
+  "key.spaceplane.plane_speed_up" : "加速",
+  "key.spaceplane.plane_look_up" : "战机抬头",
+  "key.spaceplane.plane_look_down" : "战机低头",
+  "key.spaceplane.plane_left_roll" : "向左滚动",
+  "key.spaceplane.plane_right_roll" :"向右滚动",
+  "key.spaceplane.plane_left" : "左转",
+  "key.spaceplane.plane_look_right" : "右转",
+  "key.spaceplane.launch_cannonball" : "Fa♂射炮弹",
+  "key.spaceplane.launch_missile" : "Fa♂射导弹",
+  "key.spaceplane.separate_tractor" : "分离牵引器",
+  "key.spaceplane.interceptor_missile" : "拦截导弹"
+
+
+
+
 }

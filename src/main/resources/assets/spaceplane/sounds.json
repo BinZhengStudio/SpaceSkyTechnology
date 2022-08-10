@@ -1,0 +1,8 @@
+{
+  "plane_engine": {
+    "subtitle": "sound.spaceplane.plane_engine",
+    "sounds": [
+      "spaceplane:plane_engine"
+    ]
+  }
+}
